@@ -43,7 +43,11 @@ def retrieve_top_k_chunks(query: str, top_k: int, db_config: dict) -> List[Dict]
     # )  # TODO: get reference to app state from Request...
     query_embedding = embedding_model.encode(
         query, convert_to_tensor=False
-    ).tolist()  # Need list converstion for pgvector to interpret correctly
+    )
+    
+    # Convert to list if it's a numpy array
+    if hasattr(query_embedding, 'tolist'):
+        query_embedding = query_embedding.tolist()
 
     # Connect to the database
     conn = get_db_connection(db_config)

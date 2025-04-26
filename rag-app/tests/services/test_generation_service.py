@@ -177,4 +177,4 @@ async def test_generate_response_with_multiple_chunks(
     # Assertions
     assert "used in solar cells" in response
     assert "unique properties" in response
-    assert "efficiency has improved" in response
+    assert "efficiency has recently improved" in response

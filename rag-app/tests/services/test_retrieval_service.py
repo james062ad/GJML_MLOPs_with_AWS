@@ -30,7 +30,7 @@ async def test_retrieve_top_k_chunks(db_config):
     with patch("server.src.services.retrieval_service.embedding_model.encode") as mock_encode:
         # Set up the mock to return a fixed embedding
         # Return a numpy array instead of a list to support .tolist() method
-        mock_encode.return_value = np.array([0.1, 0.2, 0.3])
+        mock_encode.return_value = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         
         # Call the function
         try:
