@@ -28,7 +28,7 @@ async def test_retrieve_top_k_chunks(db_config):
 
     # Create a mock for the entire SentenceTransformer module
     mock_model = MagicMock()
-    mock_model.encode.return_value = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+    mock_model.encode.return_value = np.array([0.1] * 384)  # Create a 384-dimensional vector
     
     # Mock the entire module to avoid loading the real model
     with patch("server.src.services.retrieval_service.SentenceTransformer", return_value=mock_model):

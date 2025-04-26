@@ -78,7 +78,7 @@ def setup_test_database(db_config):
             id SERIAL PRIMARY KEY,
             title TEXT,
             chunk TEXT,
-            embedding vector(10)
+            embedding vector(384)
         );
         """)
         
@@ -86,9 +86,9 @@ def setup_test_database(db_config):
         cursor.execute("""
         INSERT INTO papers (title, chunk, embedding)
         VALUES 
-            ('Test Paper 1', 'Perovskite materials are used in solar cells.', '[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]'::vector),
-            ('Test Paper 2', 'Perovskites have unique electronic properties.', '[0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 0.1, 0.2, 0.3]'::vector),
-            ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[0.7, 0.8, 0.9, 1.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]'::vector)
+            ('Test Paper 1', 'Perovskite materials are used in solar cells.', '[0.1]'::vector(384)),
+            ('Test Paper 2', 'Perovskites have unique electronic properties.', '[0.1]'::vector(384)),
+            ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[0.1]'::vector(384))
         ON CONFLICT DO NOTHING;
         """)
         
