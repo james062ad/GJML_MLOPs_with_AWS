@@ -115,7 +115,7 @@ async def generate_response(
     Answer:
     """
     # Concatenate documents' summaries as the context for generation
-    context = "\n".join([chunk["chunk"] for chunk in chunks])
+    context = "\n".join([chunk["text"] for chunk in chunks])
     prompt = QUERY_PROMPT.format(context=context, query=query)
     print(f"calling call_llm ...")
     response = call_llm(prompt)

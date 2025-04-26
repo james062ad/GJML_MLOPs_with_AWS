@@ -3,6 +3,7 @@ from server.src.services.retrieval_service import retrieve_top_k_chunks
 from dotenv import load_dotenv
 import os
 from unittest.mock import patch
+import numpy as np
 
 # TODO: update to use BaseSettings implementation
 load_dotenv()
@@ -28,7 +29,8 @@ async def test_retrieve_top_k_chunks(db_config):
     # Mock the embedding model
     with patch("server.src.services.retrieval_service.embedding_model.encode") as mock_encode:
         # Set up the mock to return a fixed embedding
-        mock_encode.return_value = [0.1, 0.2, 0.3]
+        # Return a numpy array instead of a list to support .tolist() method
+        mock_encode.return_value = np.array([0.1, 0.2, 0.3])
         
         # Call the function
         try:
@@ -42,6 +44,6 @@ async def test_retrieve_top_k_chunks(db_config):
                 assert "id" in doc
                 assert "title" in doc
                 assert "chunk" in doc
-                assert "similarity" in doc
+                assert "similarity_score" in doc
         except Exception as e:
             pytest.fail(f"Test failed with error: {str(e)}")

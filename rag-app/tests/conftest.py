@@ -59,6 +59,9 @@ def setup_test_database(db_config):
     try:
         cursor = conn.cursor()
         
+        # Create the pgvector extension if it doesn't exist
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        
         # Create the papers table if it doesn't exist
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS papers (
