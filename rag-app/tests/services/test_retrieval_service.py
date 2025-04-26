@@ -2,6 +2,7 @@ import pytest
 from server.src.services.retrieval_service import retrieve_top_k_chunks
 from dotenv import load_dotenv
 import os
+from unittest.mock import patch
 
 # TODO: update to use BaseSettings implementation
 load_dotenv()
@@ -19,23 +20,28 @@ db_config = {
 
 # Test function for the retrieval service - your postgres instance needs to be running.
 @pytest.mark.asyncio
-async def test_retrieve_top_k_chunks():
+async def test_retrieve_top_k_chunks(db_config):
     # Mock query and top_k value
     query = "perovskite"
     top_k = 5
 
-    # Call the function
-    try:
-        documents = retrieve_top_k_chunks(query, top_k, db_config)
+    # Mock the embedding model
+    with patch("server.src.services.retrieval_service.embedding_model.encode") as mock_encode:
+        # Set up the mock to return a fixed embedding
+        mock_encode.return_value = [0.1, 0.2, 0.3]
+        
+        # Call the function
+        try:
+            documents = retrieve_top_k_chunks(query, top_k, db_config)
 
-        # Assertions
-        assert isinstance(documents, list)
-        assert len(documents) <= top_k
+            # Assertions
+            assert isinstance(documents, list)
+            assert len(documents) <= top_k
 
-        for doc in documents:
-            assert "id" in doc
-            assert "title" in doc
-            assert "summary" in doc
-            assert "similarity_score" in doc
-    except Exception as e:
-        pytest.fail(f"Test failed with error: {str(e)}")
+            for doc in documents:
+                assert "id" in doc
+                assert "title" in doc
+                assert "chunk" in doc
+                assert "similarity" in doc
+        except Exception as e:
+            pytest.fail(f"Test failed with error: {str(e)}")

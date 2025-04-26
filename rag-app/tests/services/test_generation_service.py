@@ -37,7 +37,7 @@ async def test_generate_response_basic(
     }
 
     # Call the function under test
-    response = generate_response(mock_query, mock_chunks, **mock_config)
+    response = await generate_response(mock_query, mock_chunks, **mock_config)
     print(response)
     # Assertions
     assert isinstance(response, Union[Dict, None]), "Response should be a Dict or None."
@@ -73,7 +73,7 @@ async def test_generate_response_empty_chunks(
     )
 
     # Call the function with an empty list of chunks
-    response = generate_response(mock_query, [], **mock_config)
+    response = await generate_response(mock_query, [], **mock_config)
 
     # Assertions
     assert (
@@ -103,7 +103,7 @@ async def test_generate_response_high_temperature(
     )
 
     # Call the function with a high temperature setting
-    response = generate_response(
+    response = await generate_response(
         mock_query, mock_chunks, max_tokens=150, temperature=1.5
     )
 
@@ -136,7 +136,7 @@ async def test_generate_response_long_query(mock_chunks, mock_generate_response)
     )
 
     # Call the generate_response function with the long query
-    response = generate_response(
+    response = await generate_response(
         long_query, mock_chunks, max_tokens=150, temperature=0.7
     )
 
@@ -170,7 +170,7 @@ async def test_generate_response_with_multiple_chunks(
     )
 
     # Call the function with multiple chunks
-    response = generate_response(
+    response = await generate_response(
         mock_query, mock_chunks, max_tokens=150, temperature=0.7
     )
 
