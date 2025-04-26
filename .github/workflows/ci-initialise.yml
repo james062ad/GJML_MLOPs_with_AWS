@@ -42,8 +42,8 @@ env:
   OPIK_PROJECT_NAME: rag-app-test
   
   # OpenAI settings
-  #OPENAI_MODEL: gpt-3.5-turbo
-  #OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OPENAI_MODEL: gpt-3.5-turbo
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   
   # Poetry version to use
   POETRY_VERSION: "1.8.2"
@@ -118,7 +118,7 @@ jobs:
           echo "PostgreSQL is up - executing tests"
           
           # Run tests with coverage
-          poetry run pytest tests/ -v --junitxml=test-results.xml --cov=server --cov-report=xml
+          poetry run pytest tests/ -v --junitxml=test-results.xml --cov=server --cov-report=xml -c pytest.ini
           
       # Step 7: Upload test results and coverage as artifacts
       - name: Upload test results and coverage
