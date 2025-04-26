@@ -171,6 +171,8 @@ jobs:
       #   run: |
       #     docker build -t rag-app-postgres:latest -f pgvector2.Dockerfile .
       
+
+      
       # - name: Build application image
       #   working-directory: ./rag-app
       #   run: |
