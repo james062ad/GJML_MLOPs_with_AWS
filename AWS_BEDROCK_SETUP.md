@@ -107,35 +107,275 @@ Options include:
 - `--store-secret`: Store credentials in AWS Secrets Manager
 - `--skip-policies`: Skip creating policies (use existing ones)
 
-## Integration with RAG Project
+## Code Changes Required
 
-### What's Being Replaced
+After completing the AWS setup, you'll need to modify the following files to integrate AWS Bedrock with your RAG application:
 
-The RAG implementation currently uses:
-1. **OpenAI's API** for the generation service
-2. **SentenceTransformer** for embedding generation
+### 1. Update `rag-app/server/src/services/generation_service.py`
 
-### How AWS Bedrock Fits In
+This file contains the current OpenAI implementation and needs to be updated to use AWS Bedrock:
 
-AWS Bedrock will primarily replace OpenAI for the response generation step in the RAG pipeline:
+1. Comment out the OpenAI client initialization:
+   ```python
+   #----current code ----
+   client = OpenAI()
+   #----AWS code ----
+   # Initialize AWS Bedrock client
+   # bedrock_client = boto3.client(
+   #     service_name='bedrock-runtime',
+   #     region_name=settings.aws_region,
+   #     aws_access_key_id=settings.aws_access_key_id,
+   #     aws_secret_access_key=settings.aws_secret_access_key,
+   #     aws_session_token=settings.aws_session_token
+   # )
+   ```
 
-1. **Document Processing**: Breaking documents into chunks and creating embeddings
-2. **Query Processing**: Converting user queries to embeddings and finding relevant documents
-3. **Response Generation**: Using AWS Bedrock models instead of OpenAI to generate answers
+2. Replace the `call_llm` function with the AWS Bedrock implementation:
+   ```python
+   #----current code ----
+   try:
+       response = client.chat.completions.create(
+           model=settings.openai_model,  # Ensure this model is defined in settings
+           messages=[{"role": "user", "content": prompt}],
+           temperature=settings.temperature,
+           max_tokens=settings.max_tokens,
+           top_p=settings.top_p,
+       )
 
-### Benefits of Using AWS Bedrock
+       print("Successfully generated response")
+       data = {"response": response.choices[0].message.content}
+       data["response_tokens_per_second"] = (
+           (response.usage.total_tokens / response.usage.completion_tokens)
+           if hasattr(response, "usage")
+           else None
+       )
+       print(f"call_llm returning {data}")
+       print(f"data.response = {data['response']}")
+       return data
+   #----AWS code ----
+   # try:
+   #     # Prepare the request body for Bedrock
+   #     request_body = {
+   #         "prompt": prompt,
+   #         "max_tokens": settings.max_tokens,
+   #         "temperature": settings.temperature,
+   #         "top_p": settings.top_p,
+   #     }
+   #     
+   #     # Call Bedrock API
+   #     response = bedrock_client.invoke_model(
+   #         modelId=settings.bedrock_model_id,
+   #         body=json.dumps(request_body)
+   #     )
+   #     
+   #     # Parse the response
+   #     response_body = json.loads(response.get('body').read())
+   #     
+   #     print("Successfully generated response from Bedrock")
+   #     data = {"response": response_body.get('completion')}
+   #     
+   #     # Note: Bedrock might not provide token usage information in the same format as OpenAI
+   #     # Adjust this part based on the actual response format from Bedrock
+   #     if 'usage' in response_body:
+   #         data["response_tokens_per_second"] = (
+   #             (response_body['usage']['total_tokens'] / response_body['usage']['completion_tokens'])
+   #             if 'total_tokens' in response_body['usage'] and 'completion_tokens' in response_body['usage']
+   #             else None
+   #         )
+   #     
+   #     print(f"call_llm returning {data}")
+   #     print(f"data.response = {data['response']}")
+   #     return data
+   ```
 
-1. **Cost Management**: Potentially more cost-effective than OpenAI
-2. **Integration**: Better integration with other AWS services
-3. **Flexibility**: Access to multiple models with different capabilities
-4. **Enterprise Features**: Better security and compliance features
+3. Update the error handling:
+   ```python
+   #----current code ----
+   except Exception as e:
+       print(f"Error calling OpenAI API: {e}")
+       return None  # TODO: error handling
+   #----AWS code ----
+   # except ClientError as e:
+   #     print(f"Error calling AWS Bedrock API: {e}")
+   #     return None  # TODO: error handling
+   ```
 
-## Next Steps After Setup
+4. Update the `generate_response` function:
+   ```python
+   #----current code ----
+   QUERY_PROMPT = """
+   You are a helpful AI language assistant, please use the following context to answer the query. Answer in English.
+   Context: {context}
+   Query: {query}
+   Answer:
+   """
+   # Concatenate documents' summaries as the context for generation
+   context = "\n".join([chunk["chunk"] for chunk in chunks])
+   prompt = QUERY_PROMPT.format(context=context, query=query)
+   print(f"calling call_llm ...")
+   response = call_llm(prompt)
+   print(f"generate_response returning {response}")
+   return response  # now this is a dict.
+   #----AWS code ----
+   # # The prompt format remains the same for Bedrock
+   # QUERY_PROMPT = """
+   # You are a helpful AI language assistant, please use the following context to answer the query. Answer in English.
+   # Context: {context}
+   # Query: {query}
+   # Answer:
+   # """
+   # # Concatenate documents' summaries as the context for generation
+   # context = "\n".join([chunk["chunk"] for chunk in chunks])
+   # prompt = QUERY_PROMPT.format(context=context, query=query)
+   # print(f"calling Bedrock API...")
+   # response = call_llm(prompt)
+   # print(f"generate_response returning {response}")
+   # return response
+   ```
 
-1. Modify the generation service code to use AWS Bedrock instead of OpenAI
-2. Update configuration to include AWS Bedrock settings
-3. Test the system with the new model provider
-4. Consider implementing AWS Bedrock embeddings as an alternative to SentenceTransformer
+### 2. Update `rag-app/server/src/config.py`
+
+Add AWS Bedrock configuration settings to the Settings class:
+
+```python
+#----current code ----
+# OpenAI config
+openai_model: str = Field(..., env="OPENAI_MODEL")
+openai_api_key: str = Field(..., env="OPENAI_API_KEY")
+#----AWS code ----
+# AWS Bedrock config
+# aws_region: str = Field(..., env="AWS_REGION")
+# aws_access_key_id: str = Field(..., env="AWS_ACCESS_KEY_ID")
+# aws_secret_access_key: str = Field(..., env="AWS_SECRET_ACCESS_KEY")
+# aws_session_token: str = Field(None, env="AWS_SESSION_TOKEN")  # Optional, for temporary credentials
+# bedrock_model_id: str = Field(..., env="BEDROCK_MODEL_ID")  # e.g., "amazon.titan-text-express-v1"
+```
+
+### 3. Update `rag-app/server/config/rag.yaml`
+
+Update the generation configuration to use AWS Bedrock:
+
+```yaml
+#----current code ----
+generation:
+  model: "tinyllama"
+  #max_tokens: 150
+  temperature: 0.7
+#----AWS code ----
+# generation:
+#   model: "bedrock"  # Use "bedrock" instead of "tinyllama" or "openai"
+#   bedrock_model_id: "amazon.titan-text-express-v1"  # Specific Bedrock model ID
+#   #max_tokens: 150
+#   temperature: 0.7
+#   aws_region: "eu-west-2"  # AWS region where Bedrock is available
+```
+
+### 4. Update `rag-app/server/src/config_loader.py`
+
+Enhance the ConfigLoader class to handle AWS Bedrock configuration:
+
+```python
+#----current code ----
+class ConfigLoader:
+    _config = None
+
+    @classmethod
+    def load_config(cls, config_name: str):
+        """
+        Loads the configuration file from the config/ directory.
+        This method caches the configuration to avoid reloading multiple times.
+        """
+        if cls._config is None:
+            # Determine the base path of the configuration directory
+            config_path = os.path.join(
+                os.path.dirname(__file__), "../config", f"{config_name}.yaml"
+            )
+
+            # Load the YAML config file
+            with open(config_path, "r") as file:
+                cls._config = yaml.safe_load(file)
+
+        return cls._config
+
+    @classmethod
+    def get_config_value(cls, key: str, default: Any = None) -> Optional[Any]:
+        """
+        Retrieve a specific config value from the loaded configuration.
+        """
+        if cls._config is None:
+            raise ValueError("Configuration not loaded. Please call load_config first.")
+
+        return cls._config.get(key, default)
+
+#----AWS code ----
+# class ConfigLoader:
+#     _config = None
+# 
+#     @classmethod
+#     def load_config(cls, config_name: str):
+#         """
+#         Loads the configuration file from the config/ directory and handles Bedrock settings.
+#         """
+#         if cls._config is None:
+#             config_path = os.path.join(
+#                 os.path.dirname(__file__), "../config", f"{config_name}.yaml"
+#             )
+# 
+#             with open(config_path, "r") as file:
+#                 cls._config = yaml.safe_load(file)
+# 
+#             # Handle Bedrock configuration
+#             if cls._config.get("generation", {}).get("model") == "bedrock":
+#                 from server.src.config import settings
+#                 gen_config = cls._config.get("generation", {})
+#                 
+#                 # Update Bedrock settings
+#                 if hasattr(settings, "bedrock_model_id"):
+#                     settings.bedrock_model_id = gen_config.get("bedrock_model_id")
+#                 if hasattr(settings, "aws_region"):
+#                     settings.aws_region = gen_config.get("aws_region")
+# 
+#         return cls._config
+# 
+#     @classmethod
+#     def get_config_value(cls, key: str, default: Any = None) -> Optional[Any]:
+#         """
+#         Retrieve config values with special handling for Bedrock settings.
+#         """
+#         if cls._config is None:
+#             raise ValueError("Configuration not loaded. Please call load_config first.")
+# 
+#         # Handle Bedrock-specific keys
+#         if key in ["bedrock_model_id", "aws_region"]:
+#             return cls._config.get("generation", {}).get(key, default)
+#         elif key == "model_type":
+#             return cls._config.get("generation", {}).get("model", default)
+# 
+#         return cls._config.get(key, default)
+# 
+#     @classmethod
+#     def is_using_bedrock(cls) -> bool:
+#         """Check if AWS Bedrock is enabled in config."""
+#         if cls._config is None:
+#             raise ValueError("Configuration not loaded. Please call load_config first.")
+#         return cls._config.get("generation", {}).get("model") == "bedrock"
+```
+
+## Implementation Steps
+
+1. Complete the AWS setup steps in this guide
+2. Update your .env file with the new AWS credentials:
+   ```
+   AWS_REGION=eu-west-2
+   AWS_ACCESS_KEY_ID=your_access_key_id
+   AWS_SECRET_ACCESS_KEY=your_secret_access_key
+   AWS_SESSION_TOKEN=your_session_token  # If using temporary credentials
+   BEDROCK_MODEL_ID=amazon.titan-text-express-v1
+   ```
+3. For each file mentioned above:
+   - Comment out the current code sections (marked with `#----current code ----`)
+   - Uncomment the AWS code sections (marked with `#----AWS code ----`)
+4. Test the integration with AWS Bedrock
 
 ## Troubleshooting
 

@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     openai_model: str = Field(..., env="OPENAI_MODEL")
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
 
+    # AWS Bedrock config
+    # aws_region: str = Field(..., env="AWS_REGION")
+    # aws_access_key_id: str = Field(..., env="AWS_ACCESS_KEY_ID")
+    # aws_secret_access_key: str = Field(..., env="AWS_SECRET_ACCESS_KEY")
+    # aws_session_token: str = Field(None, env="AWS_SESSION_TOKEN")  # Optional, for temporary credentials
+    # bedrock_model_id: str = Field(..., env="BEDROCK_MODEL_ID")  # e.g., "amazon.titan-text-express-v1"
+
     rag_config: dict = {}
 
     class Config:
