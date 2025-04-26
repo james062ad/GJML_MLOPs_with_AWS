@@ -164,10 +164,9 @@ async def test_generate_response_with_multiple_chunks(
         - The response contains the keywords 'Perovskites', 'solar cells',
           'unique properties', and 'efficiency has improved'.
     """
-    mock_generate_response.return_value = (
-        "Perovskites are used in solar cells and have unique properties. "
-        "Their efficiency has recently improved."
-    )
+    mock_generate_response.return_value = {
+        "response": "Perovskites are used in solar cells and have unique properties. Their efficiency has recently improved."
+    }
 
     # Call the function with multiple chunks
     response = await generate_response(

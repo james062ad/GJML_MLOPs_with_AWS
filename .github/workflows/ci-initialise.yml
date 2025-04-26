@@ -103,6 +103,13 @@ jobs:
         run: |
           python -m pip install --upgrade setuptools==68.2.2
           
+      # Step 4.6: Clean up problematic packages
+      - name: Clean up problematic packages
+        working-directory: ./rag-app
+        run: |
+          # Remove problematic NVIDIA packages if they exist
+          pip uninstall -y nvidia-cuda-runtime-cu12 nvidia-cuda-cupti-cu12 nvidia-cuda-nvrtc-cu12 nvidia-cudnn-cu12 nvidia-cufft-cu12 nvidia-curand-cu12 nvidia-cusolver-cu12 nvidia-nccl-cu12 nvidia-nvtx-cu12 || true
+          
       # Step 5: Install project dependencies
       - name: Install dependencies
         working-directory: ./rag-app

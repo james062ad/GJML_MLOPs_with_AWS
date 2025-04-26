@@ -2,7 +2,7 @@ import pytest
 from server.src.services.retrieval_service import retrieve_top_k_chunks
 from dotenv import load_dotenv
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import numpy as np
 
 # TODO: update to use BaseSettings implementation
@@ -26,12 +26,12 @@ async def test_retrieve_top_k_chunks(db_config):
     query = "perovskite"
     top_k = 5
 
-    # Mock the embedding model
-    with patch("server.src.services.retrieval_service.embedding_model.encode") as mock_encode:
-        # Set up the mock to return a fixed embedding
-        # Return a numpy array instead of a list to support .tolist() method
-        mock_encode.return_value = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-        
+    # Create a mock for the entire SentenceTransformer module
+    mock_model = MagicMock()
+    mock_model.encode.return_value = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+    
+    # Mock the entire module to avoid loading the real model
+    with patch("server.src.services.retrieval_service.SentenceTransformer", return_value=mock_model):
         # Call the function
         try:
             documents = retrieve_top_k_chunks(query, top_k, db_config)

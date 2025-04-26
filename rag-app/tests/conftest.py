@@ -1,8 +1,18 @@
 import pytest
 from server.src.services.generation_service import generate_response, call_llm
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+
+@pytest.fixture(autouse=True)
+def mock_sentence_transformer():
+    """Mock the SentenceTransformer module to avoid loading the real model during tests."""
+    mock_model = MagicMock()
+    mock_model.encode.return_value = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    
+    with patch("server.src.services.retrieval_service.SentenceTransformer", return_value=mock_model):
+        yield
 
 
 @pytest.fixture
