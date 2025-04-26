@@ -124,7 +124,7 @@ jobs:
           echo "PostgreSQL is up - executing tests"
           
           # Run tests with coverage
-          poetry run pytest tests/ -v --junitxml=test-results.xml --cov=server --cov-report=xml -c pytest.ini
+          poetry run pytest tests/ -v --junitxml=test-results.xml --cov=server --cov-report=xml
           
       # Step 7: Upload test results and coverage as artifacts
       - name: Upload test results and coverage
