@@ -1,6 +1,7 @@
 # This workflow runs automated tests whenever code is pushed to any branch
 name: CI Pipeline AWS
 
+# Define when the workflow should run
 on:
   push:
     branches:
@@ -15,26 +16,40 @@ on:
       - 'rag-app-aws/**'
   workflow_dispatch:
 
+# Define environment variables needed for the application
 env:
+  # Basic application settings
   ENVIRONMENT: test
   APP_NAME: rag-app-aws
   DEBUG: "true"
+
+  # Database connection settings (for testing only)
   POSTGRES_HOST: localhost
   POSTGRES_DB: test_db
   POSTGRES_USER: test_user
   POSTGRES_PASSWORD: test_password
   POSTGRES_PORT: 5432
+
+  # API endpoints and paths
   ARXIV_API_URL: https://export.arxiv.org/api/query
   DATA_PATH: ./data
+
+  # Model generation parameters
   TEMPERATURE: "0.7"
   TOP_P: "0.9"
   MAX_TOKENS: "1000"
+
+  # Opik API settings (for AI model evaluation)
   OPIK_API_KEY: ${{ secrets.OPIK_API_KEY }}
   OPIK_WORKSPACE: ${{ secrets.OPIK_WORKSPACE }}
   OPIK_ENVIRONMENT: test
   OPIK_PROJECT_NAME: rag-app-aws-test
+
+  # OpenAI settings
   OPENAI_MODEL: gpt-3.5-turbo
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+  # Poetry version to use
   POETRY_VERSION: "1.8.2"
 
 jobs:
@@ -105,6 +120,15 @@ jobs:
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
 
+      # Step 5.4: Clean up previous virtual environment
+      - name: Clean up existing virtual environment
+        working-directory: ./rag-app-aws
+        run: |
+          echo "Removing old .venv folder if exists..."
+          rm -rf .venv
+          echo "Cleaning .pytest_cache if exists..."
+          rm -rf .pytest_cache
+
       # Step 5.5: Install setuptools
       - name: Install setuptools
         working-directory: ./rag-app-aws
@@ -124,6 +148,13 @@ jobs:
           echo "Installing dependencies..."
           poetry install --no-interaction --no-root
           echo "Installation complete!"
+
+      # Step 6.5: Debug - List project files
+      - name: Debug - List project files
+        working-directory: ./rag-app-aws
+        run: |
+          echo "Listing all files in rag-app-aws project:"
+          find .
 
       # Step 7: Initialize database and run tests
       - name: Initialize database and run tests
