@@ -3,18 +3,18 @@ from botocore.exceptions import ClientError
 import os
 from typing import List, Dict, Union
 from server.src.models.document import RetrievedDocument  # Import the Pydantic model
-from server.src.config import Settings
 from fastapi import Depends
 import requests
 import json
-from server.src.config import settings
 import opik
 import openai
 from openai import OpenAI
+from server.src.config import get_settings  # ✅ Correct lazy loading
 
-#----current code ----
+# ----current code ----
 client = OpenAI()
-#----AWS code ----
+
+# ----AWS code ----
 # Initialize AWS Bedrock client
 # bedrock_client = boto3.client(
 #     service_name='bedrock-runtime',
@@ -24,10 +24,12 @@ client = OpenAI()
 #     aws_session_token=settings.aws_session_token
 # )
 
+
 @opik.track  # TODO: test if this works with async methods? I think it will.
 def call_llm(prompt: str) -> Union[Dict, None]:
     """Call OpenAI's API to generate a response."""
-    #----current code ----
+    settings = get_settings()  # ✅ Load settings dynamically at runtime
+    # ----current code ----
     try:
         response = client.chat.completions.create(
             model=settings.openai_model,  # Ensure this model is defined in settings
@@ -47,7 +49,8 @@ def call_llm(prompt: str) -> Union[Dict, None]:
         print(f"call_llm returning {data}")
         print(f"data.response = {data['response']}")
         return data
-    #----AWS code ----
+
+    # ----AWS code ----
     # try:
     #     # Prepare the request body for Bedrock
     #     request_body = {
@@ -56,19 +59,19 @@ def call_llm(prompt: str) -> Union[Dict, None]:
     #         "temperature": settings.temperature,
     #         "top_p": settings.top_p,
     #     }
-    #     
+    #
     #     # Call Bedrock API
     #     response = bedrock_client.invoke_model(
     #         modelId=settings.bedrock_model_id,
     #         body=json.dumps(request_body)
     #     )
-    #     
+    #
     #     # Parse the response
     #     response_body = json.loads(response.get('body').read())
-    #     
+    #
     #     print("Successfully generated response from Bedrock")
     #     data = {"response": response_body.get('completion')}
-    #     
+    #
     #     # Note: Bedrock might not provide token usage information in the same format as OpenAI
     #     # Adjust this part based on the actual response format from Bedrock
     #     if 'usage' in response_body:
@@ -77,7 +80,7 @@ def call_llm(prompt: str) -> Union[Dict, None]:
     #             if 'total_tokens' in response_body['usage'] and 'completion_tokens' in response_body['usage']
     #             else None
     #         )
-    #     
+    #
     #     print(f"call_llm returning {data}")
     #     print(f"data.response = {data['response']}")
     #     return data
@@ -85,10 +88,12 @@ def call_llm(prompt: str) -> Union[Dict, None]:
     except Exception as e:
         print(f"Error calling OpenAI API: {e}")
         return None  # TODO: error handling
-    #----AWS code ----
+
+    # ----AWS code ----
     # except ClientError as e:
     #     print(f"Error calling AWS Bedrock API: {e}")
     #     return None  # TODO: error handling
+
 
 @opik.track
 async def generate_response(
@@ -96,10 +101,10 @@ async def generate_response(
     chunks: List[Dict],
     max_tokens: int = 200,
     temperature: float = 0.7,
-) -> Dict:  # str:
+) -> Dict:
     """
-    Generate a response using an Ollama endpoint running locally, t
-    his will be changed to allow for Bedrock later.
+    Generate a response using an Ollama endpoint running locally,
+    this will be changed to allow for Bedrock later.
 
     Args:
         query (str): The user query.
@@ -107,7 +112,7 @@ async def generate_response(
         max_tokens (int): The maximum number of tokens to generate in the response.
         temperature (float): Sampling temperature for the model.
     """
-    #----current code ----
+    # ----current code ----
     QUERY_PROMPT = """
     You are a helpful AI language assistant, please use the following context to answer the query. Answer in English.
     Context: {context}
@@ -121,7 +126,8 @@ async def generate_response(
     response = call_llm(prompt)
     print(f"generate_response returning {response}")
     return response  # now this is a dict.
-    #----AWS code ----
+
+    # ----AWS code ----
     # # The prompt format remains the same for Bedrock
     # QUERY_PROMPT = """
     # You are a helpful AI language assistant, please use the following context to answer the query. Answer in English.

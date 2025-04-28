@@ -10,10 +10,12 @@ from fastapi import FastAPI, Depends
 from contextlib import asynccontextmanager
 from controllers import retrieval, health_check, generation
 from sentence_transformers import SentenceTransformer
-from server.src.config import Settings
+from server.src.config import get_settings  # 🛠 import get_settings here
 import opik
 
 # Async context manager to load in models I want to keep in memory for the app to use.
+
+
 @asynccontextmanager
 async def lifespan_context(app: FastAPI):
     """
@@ -24,16 +26,20 @@ async def lifespan_context(app: FastAPI):
     print("Configure opik...")
     opik.configure()
 
-    # Note below is not actually being passed around the app, needs work!
     print("Loading embedding model...")
-    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")  # Load the model
+    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    # Optionally load settings here if you need during lifespan
+    settings = get_settings()
+    print(f"Environment loaded: {settings.environment}")
+
     try:
         yield {
             "embedding_model": embedding_model
-        }  # Pass the model as part of the app state
+        }
     finally:
         print("Cleaning up embedding model...")
-        del embedding_model  # Optionally clean up if necessary
+        del embedding_model
 
 
 app = FastAPI(lifespan=lifespan_context)
