@@ -4,14 +4,7 @@ from unittest.mock import patch, MagicMock
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-
-# Configure pytest-asyncio
-def pytest_configure(config):
-    """Configure pytest to handle asyncio properly."""
-    config.addinivalue_line(
-        "asyncio_mode",
-        "auto"
-    )
+# (Removed broken pytest_configure here)
 
 
 @pytest.fixture(scope="session")
@@ -40,8 +33,9 @@ def mock_opik_tracking():
 def mock_sentence_transformer():
     """Mock the SentenceTransformer module to avoid loading the real model during tests."""
     mock_model = MagicMock()
-    mock_model.encode.return_value = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    
+    mock_model.encode.return_value = [
+        0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
     with patch("server.src.services.retrieval_service.SentenceTransformer", return_value=mock_model):
         yield
 
@@ -56,12 +50,12 @@ def mock_query():
 def mock_chunks():
     """Fixture to provide mock retrieved document chunks for generation tests."""
     return [
-        # {"text": "Perovskite materials are used in solar cells."},
-        # {"text": "Perovskites have unique electronic properties."},
-        # {"text": "The efficiency of perovskite solar cells has improved."},
-        {"id": 1, "title": "Paper 1", "text": "Perovskite materials are used in solar cells.", "similarity_score": 0.8},
-        {"id": 2, "title": "Paper 2", "text": "Perovskites have unique electronic properties.", "similarity_score": 0.7},
-        {"id": 3, "title": "Paper 3", "text": "The efficiency of perovskite solar cells has improved.", "similarity_score": 0.6},
+        {"id": 1, "title": "Paper 1",
+            "text": "Perovskite materials are used in solar cells.", "similarity_score": 0.8},
+        {"id": 2, "title": "Paper 2",
+            "text": "Perovskites have unique electronic properties.", "similarity_score": 0.7},
+        {"id": 3, "title": "Paper 3",
+            "text": "The efficiency of perovskite solar cells has improved.", "similarity_score": 0.6},
     ]
 
 
@@ -96,16 +90,15 @@ def db_config():
 @pytest.fixture(autouse=True)
 def setup_test_database(db_config):
     """Fixture to set up the test database with required tables."""
-    # Connect to the database
     conn = psycopg2.connect(**db_config)
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    
+
     try:
         cursor = conn.cursor()
-        
+
         # Create the pgvector extension if it doesn't exist
         cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-        
+
         # Create the papers table if it doesn't exist
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS papers (
@@ -115,10 +108,10 @@ def setup_test_database(db_config):
             embedding vector(384)
         );
         """)
-        
+
         # Create a 384-dimensional test vector (all 0.1)
         test_vector = ','.join(['0.1'] * 384)
-        
+
         # Insert some test data
         cursor.execute(f"""
         INSERT INTO papers (title, chunk, embedding)
@@ -128,7 +121,7 @@ def setup_test_database(db_config):
             ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[{test_vector}]'::vector(384))
         ON CONFLICT DO NOTHING;
         """)
-        
+
         conn.commit()
     except Exception as e:
         print(f"Error setting up test database: {e}")
