@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # setup-aws-bedrock.sh
-# Full zero-touch AWS Bedrock setup script
+# Full zero-touch AWS Bedrock setup script (Final version)
 
 # Exit on error
 set -e
@@ -19,20 +19,17 @@ BUDGET_AMOUNT=30
 
 # --- FUNCTIONS ---
 
-# Error handling
 handle_error() {
   echo "❌ Error: $1"
   exit 1
 }
 
-# Check for required commands
 check_command() {
   if ! command -v $1 &> /dev/null; then
     handle_error "$1 is required but not installed. Please install it first."
   fi
 }
 
-# Verify AWS CLI authentication
 verify_or_prompt_credentials() {
   echo "🔍 Checking AWS CLI authentication..."
   if ! aws sts get-caller-identity --output text &> /dev/null; then
@@ -44,7 +41,6 @@ verify_or_prompt_credentials() {
     read -p "Enter your AWS Default Region (default: eu-west-2): " REGION_INPUT
     AWS_REGION=${REGION_INPUT:-eu-west-2}
 
-    # Configure AWS CLI
     aws configure set aws_access_key_id "$ACCESS_KEY_ID"
     aws configure set aws_secret_access_key "$SECRET_ACCESS_KEY"
     aws configure set region "$AWS_REGION"
@@ -52,7 +48,6 @@ verify_or_prompt_credentials() {
 
     echo "✅ AWS CLI configured."
 
-    # Recheck
     if ! aws sts get-caller-identity --output text &> /dev/null; then
       handle_error "Authentication failed even after providing credentials."
     fi
@@ -61,7 +56,6 @@ verify_or_prompt_credentials() {
   fi
 }
 
-# Create IAM user
 create_iam_user() {
   echo "👤 Creating IAM user: $USER_NAME..."
   if ! aws iam create-user --user-name $USER_NAME 2>/dev/null; then
@@ -76,7 +70,6 @@ create_iam_user() {
   fi
 }
 
-# Create custom Bedrock policy
 create_bedrock_policy() {
   echo "📜 Creating custom BedrockAccessPolicy..."
   cat <<EOF > bedrock-policy.json
@@ -101,7 +94,19 @@ EOF
   fi
 }
 
-# Create trust role
+wait_for_policy() {
+  echo "⏳ Waiting for BedrockAccessPolicy to be available..."
+  for i in {1..10}; do
+    if aws iam get-policy --policy-arn "$1" > /dev/null 2>&1; then
+      echo "✅ BedrockAccessPolicy is now available."
+      return 0
+    fi
+    echo "⏳ Still waiting for BedrockAccessPolicy (retry $i)..."
+    sleep 5
+  done
+  handle_error "BedrockAccessPolicy was not available after waiting."
+}
+
 create_role() {
   echo "🎭 Creating role: $ROLE_NAME..."
   AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
@@ -124,19 +129,25 @@ EOF
   fi
 }
 
-# Attach policies to role
 attach_policies() {
   echo "📎 Attaching policies to role..."
+  
   BEDROCK_POLICY_ARN=$(aws iam list-policies --query "Policies[?PolicyName=='BedrockAccessPolicy'].Arn" --output text)
 
   aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AdministratorAccess || true
+  sleep 2
   aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn $BEDROCK_POLICY_ARN || true
+  sleep 2
+  
+  echo "✅ Policies attached to role."
 }
 
-# Assume the role
 assume_role() {
   echo "🔄 Assuming role..."
   AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+
+  echo "⏳ Waiting 10 seconds for IAM permissions to propagate..."
+  sleep 10
 
   SESSION_OUTPUT=$(aws sts assume-role \
     --role-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/$ROLE_NAME \
@@ -149,13 +160,16 @@ assume_role() {
   echo "✅ Temporary credentials exported."
 }
 
-# Test Bedrock
 test_bedrock() {
   echo "🧪 Testing Bedrock access..."
-  aws bedrock list-foundation-models --region $AWS_REGION
+  if aws bedrock list-foundation-models --region $AWS_REGION; then
+    echo "✅ Bedrock access verified!"
+  else
+    echo "❌ Failed to access Bedrock API. Please check permissions manually."
+    exit 1
+  fi
 }
 
-# Store credentials in Secrets Manager
 store_credentials() {
   echo "🔐 Storing CLI credentials into AWS Secrets Manager..."
 
@@ -189,34 +203,28 @@ store_credentials() {
 
 echo "🚀 Starting AWS Bedrock Setup Script..."
 
-# Check prerequisites
 check_command aws
 check_command jq
 
-# Verify or prompt for credentials
 verify_or_prompt_credentials
 
-# Create IAM user
 create_iam_user
 
-# Create policies if not skipping
 if [ "$SKIP_POLICIES" = false ]; then
   create_bedrock_policy
 fi
 
-# Create IAM role
+BEDROCK_POLICY_ARN=$(aws iam list-policies --query "Policies[?PolicyName=='BedrockAccessPolicy'].Arn" --output text)
+wait_for_policy "$BEDROCK_POLICY_ARN"
+
 create_role
 
-# Attach policies
 attach_policies
 
-# Assume role
 assume_role
 
-# Test Bedrock access
 test_bedrock
 
-# Store credentials into Secrets Manager if enabled
 if [ "$STORE_SECRET" = true ]; then
   store_credentials
 fi
