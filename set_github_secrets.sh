@@ -5,7 +5,7 @@ set -e
 
 # CONFIGURABLE VARIABLES
 # Path to the .env file (adjust this if needed)
-ENV_FILE_PATH="rag-app/.env" # <-- CHANGE this path if needed
+ENV_FILE_PATH="rag-app-aws/.env" # <-- CHANGE this path if needed
 
 # Check if gh CLI is installed
 if ! command -v gh &> /dev/null; then
@@ -84,6 +84,12 @@ SECRETS_LIST=(
     "OPIK_PROJECT_NAME"
     "OPENAI_API_KEY"
     "ARXIV_API_URL"
+    "AWS_ACCESS_KEY_ID"
+    "AWS_SECRET_ACCESS_KEY"
+    "AWS_SESSION_TOKEN"
+    "AWS_REGION"
+    "BEDROCK_MODEL_ID"
+    "BEDROCK_EMBEDDING_MODEL_ID"
 )
 
 # Set all secrets

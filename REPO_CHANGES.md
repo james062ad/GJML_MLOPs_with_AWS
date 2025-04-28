@@ -12,6 +12,8 @@ The following key changes were implemented to improve the repository:
 
 3. **CI/CD Pipeline**: Implemented a comprehensive CI pipeline using GitHub Actions to automate testing and deployment. [See Section 3](#3-cicd-configuration)
 
+4. **Streamlit App Improvements**: Added improvements to the Streamlit app for better user experience. [See Section 4](#4-streamlit-app-improvements)
+
 ## 1. Certificate Configuration
 
 ### 1.1 Development Container Dockerfile
@@ -330,4 +332,244 @@ jobs:
             rag-app/test-results.xml
             rag-app/coverage.xml
 ```
+
+## 4. Streamlit App Improvements
+
+### 4.1 Enhanced User Interface and Functionality
+
+**Why**: The original Streamlit app was basic and lacked important features like parameter control, timestamps, and proper styling. The improved version provides a more professional and user-friendly experience.
+
+The Streamlit app in `rag-app-aws/client/streamlit_app.py` was completely refactored with the following improvements:
+
+#### 4.1.1 Modular Code Structure
+
+The new app uses a modular approach with separate functions for different components:
+
+```python
+def apply_custom_css():
+    # Custom CSS styling
+    ...
+
+def query_fastapi(query, top_k=5, max_tokens=200, temperature=0.7):
+    # API query logic
+    ...
+
+def display_header():
+    # Header display logic
+    ...
+
+def display_sidebar():
+    # Sidebar with controls
+    ...
+
+def display_chat_message(message, role):
+    # Chat message display logic
+    ...
+
+def main():
+    # Main application flow
+    ...
+```
+
+This modular structure makes the code more maintainable, easier to understand, and allows for better separation of concerns.
+
+#### 4.1.2 Enhanced UI with Custom CSS
+
+The new app includes comprehensive custom CSS styling for a more professional look:
+
+```python
+def apply_custom_css():
+    st.markdown("""
+    <style>
+    /* Main container styling */
+    .main .block-container {
+        max-width: 1000px;
+        padding-top: 2rem;
+    }
+    
+    /* Header styling */
+    .header-container {
+        text-align: center;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+        background-color: #f0f2f6;
+        border-radius: 10px;
+    }
+    
+    /* Chat message styling */
+    .stChatMessage {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    /* User message styling */
+    .stChatMessage[data-testid="stChatMessage"][data-role="user"] {
+        background-color: #e6f3ff;
+    }
+    
+    /* Assistant message styling */
+    .stChatMessage[data-testid="stChatMessage"][data-role="assistant"] {
+        background-color: #f0f2f6;
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg {
+        background-color: #f0f2f6;
+    }
+    
+    /* Button styling */
+    .stButton button {
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 5px;
+        padding: 0.5rem 1rem;
+        font-weight: bold;
+    }
+    
+    /* Input field styling */
+    .stTextInput input {
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+    
+    /* Error message styling */
+    .error-message {
+        color: #d32f2f;
+        font-weight: bold;
+        padding: 0.5rem;
+        border-radius: 5px;
+        background-color: #ffebee;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+```
+
+This styling improves the visual appeal and usability of the app with:
+- Consistent color scheme
+- Better spacing and layout
+- Distinct styling for user and assistant messages
+- Improved button and input field appearance
+- Error message highlighting
+
+#### 4.1.3 Interactive Parameter Controls
+
+The new app adds a sidebar with interactive controls for model parameters:
+
+```python
+def display_sidebar():
+    """Display sidebar with controls and information."""
+    with st.sidebar:
+        st.header("⚙️ Settings")
+        
+        # Model parameters
+        st.subheader("Model Parameters")
+        top_k = st.slider("Top K", min_value=1, max_value=10, value=5, 
+                          help="Number of top results to consider")
+        st.session_state["top_k"] = top_k
+        
+        max_tokens = st.slider("Max Tokens", min_value=50, max_value=500, value=200, 
+                              help="Maximum number of tokens in the response")
+        st.session_state["max_tokens"] = max_tokens
+        
+        temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, 
+                               help="Higher values make the output more random, lower values more deterministic")
+        st.session_state["temperature"] = temperature
+        
+        # Clear chat button
+        if st.button("🗑️ Clear Chat History"):
+            st.session_state["messages"] = []
+            st.rerun()
+```
+
+These controls allow users to:
+- Adjust the number of top results to consider (`top_k`)
+- Control the maximum length of the response (`max_tokens`)
+- Fine-tune the randomness of the model's output (`temperature`)
+- Clear the chat history with a single click
+
+#### 4.1.4 Message Timestamps and Improved Chat Display
+
+The new app adds timestamps to messages and improves the chat display:
+
+```python
+def display_chat_message(message, role):
+    """Display a chat message with timestamp."""
+    with st.chat_message(role):
+        st.markdown(message["content"])
+        # Add timestamp if available
+        if "timestamp" in message:
+            st.caption(f"Sent at {message['timestamp']}")
+```
+
+And in the main function:
+
+```python
+# Display user message
+timestamp = datetime.now().strftime("%H:%M:%S")
+user_message = {"role": "user", "content": query, "timestamp": timestamp}
+st.session_state["messages"].append(user_message)
+display_chat_message(user_message, "user")
+
+# ...
+
+# Display bot response
+timestamp = datetime.now().strftime("%H:%M:%S")
+assistant_message = {"role": "assistant", "content": answer, "timestamp": timestamp}
+st.session_state["messages"].append(assistant_message)
+display_chat_message(assistant_message, "assistant")
+```
+
+This provides:
+- Timestamps for each message
+- Consistent message display through a dedicated function
+- Better visual separation between user and assistant messages
+
+#### 4.1.5 Loading Indicator
+
+The new app adds a loading spinner while waiting for the API response:
+
+```python
+# Show loading spinner while waiting for response
+with st.spinner("Thinking..."):
+    # Get response from FastAPI backend
+    response = query_fastapi(query, top_k, max_tokens, temperature)
+```
+
+This provides visual feedback to users that the app is processing their request, improving the user experience.
+
+#### 4.1.6 Proper Page Configuration
+
+The new app ensures that `st.set_page_config()` is called first, as required by Streamlit:
+
+```python
+def main():
+    # Set page configuration - MUST BE THE FIRST STREAMLIT COMMAND
+    st.set_page_config(
+        page_title="AI Assistant",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # Rest of the code...
+```
+
+This prevents the `StreamlitSetPageConfigMustBeFirstCommandError` error that can occur if other Streamlit commands are called before `set_page_config()`.
+
+### 4.2 Key Improvements Summary
+
+| Feature | Old App | New App | Benefit |
+|---------|---------|---------|---------|
+| Code Structure | Monolithic | Modular | Better maintainability and readability |
+| UI Styling | Basic | Custom CSS | More professional appearance |
+| Parameter Controls | None | Interactive sliders | User control over model behavior |
+| Message Timestamps | None | Added | Better conversation tracking |
+| Loading Indicator | None | Added | Improved user feedback |
+| Chat History Management | Basic | Clear button | Better user control |
+| Error Handling | Basic | Improved | Better error visibility |
+| Page Configuration | Incorrect order | Correct order | Prevents Streamlit errors |
+
+These improvements make the Streamlit app more professional, user-friendly, and feature-rich, providing a better experience for users interacting with the RAG system.
 
