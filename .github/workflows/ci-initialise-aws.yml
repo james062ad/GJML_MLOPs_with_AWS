@@ -90,7 +90,7 @@ jobs:
             ~/.local
             ~/.cache/pypoetry
             ./rag-app-aws/.venv
-          key: poetry-${{ runner.os }}-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+          key: poetry-${{ runner.os }}-${{ env.POETRY_VERSION }}-${{ hashFiles('rag-app-aws/poetry.lock') }}
           restore-keys: |
             poetry-${{ runner.os }}-${{ env.POETRY_VERSION }}-
           
@@ -103,20 +103,20 @@ jobs:
           
       # Step 4.5: Ensure setuptools is properly installed
       - name: Install setuptools
-        working-directory: ./rag-app-aws
+        working-directory: rag-app-aws
         run: |
           python -m pip install --upgrade setuptools==68.2.2
           
       # Step 4.6: Clean up problematic packages
       - name: Clean up problematic packages
-        working-directory: ./rag-app-aws
+        working-directory: rag-app-aws
         run: |
           # Remove problematic NVIDIA packages if they exist
           pip uninstall -y nvidia-cuda-runtime-cu12 nvidia-cuda-cupti-cu12 nvidia-cuda-nvrtc-cu12 nvidia-cudnn-cu12 nvidia-cufft-cu12 nvidia-curand-cu12 nvidia-cusolver-cu12 nvidia-nccl-cu12 nvidia-nvtx-cu12 || true
           
       # Step 5: Install project dependencies
       - name: Install dependencies
-        working-directory: ./rag-app-aws
+        working-directory: rag-app-aws
         run: |
           echo "Installing dependencies..."
           poetry install --no-interaction --no-root
@@ -124,7 +124,7 @@ jobs:
       
       # Step 6: Initialize database and run tests
       - name: Initialize database and run tests
-        working-directory: ./rag-app-aws
+        working-directory: rag-app-aws
         run: |
           # Wait for PostgreSQL to be ready
           echo "Waiting for PostgreSQL to be ready..."
@@ -149,7 +149,7 @@ jobs:
       
       # Step 13: Install linting tools - TEMPORARILY DISABLED
       # - name: Install linting tools
-      #   working-directory: ./rag-app-aws
+      #   working-directory: rag-app-aws
       #   run: |
       #     echo "Installing linting tools..."
       #     poetry add --group dev flake8 black isort
@@ -157,7 +157,7 @@ jobs:
       
       # Step 14: Run linting - TEMPORARILY DISABLED
       # - name: Run linting
-      #   working-directory: ./rag-app-aws
+      #   working-directory: rag-app-aws
       #   run: |
       #     poetry run flake8 server/src tests
       #     poetry run black --check server/src tests
@@ -171,13 +171,13 @@ jobs:
       #   uses: docker/setup-buildx-action@v3
       
       # - name: Build PostgreSQL image
-      #   working-directory: ./rag-app-aws/deploy/docker/postgres
+      #   working-directory: rag-app-aws/deploy/docker/postgres
       #   run: |
       #     docker build -t rag-app-aws-postgres:latest -f pgvector2.Dockerfile .
       
 
       
       # - name: Build application image
-      #   working-directory: ./rag-app-aws
+      #   working-directory: rag-app-aws
       #   run: |
       #     docker build -t rag-app-aws:latest -f Dockerfile . 

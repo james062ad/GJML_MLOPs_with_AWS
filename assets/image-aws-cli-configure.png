@@ -1,0 +1,12 @@
+This is a placeholder for an image showing the AWS CLI configuration process.
+
+The image should show:
+1. A terminal window with the `aws configure` command being executed
+2. The prompts for:
+   - AWS Access Key ID
+   - AWS Secret Access Key
+   - Default region name (e.g., eu-west-2)
+   - Default output format (json)
+3. The successful completion of the configuration
+
+This image would help users understand how to configure the AWS CLI manually if needed. 

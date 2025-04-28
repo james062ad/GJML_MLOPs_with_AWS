@@ -1,0 +1,13 @@
+This is a placeholder for an image showing the AWS Budget Alert setup process.
+
+The image should show:
+1. The AWS Billing Dashboard with "Budgets" selected in the left navigation
+2. The "Create budget" button being clicked
+3. The budget creation form with:
+   - Budget name: "Bedrock-Monthly-Budget"
+   - Budget amount: $30
+   - Budget period: Monthly
+   - Alert thresholds: 80% and 100%
+   - Email notifications configured
+
+This image would help users understand how to set up budget alerts manually if the automated script fails. 
