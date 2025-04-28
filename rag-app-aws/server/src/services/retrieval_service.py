@@ -2,10 +2,24 @@
 
 This will perform naive rag retrieval for a given query using cosine similarity and top_k retrieval
 """
+import os
 import psycopg2
 from typing import List, Dict
 from sentence_transformers import SentenceTransformer
-import opik
+import numpy as np
+
+# Conditional import for opik to allow bypassing in tests
+try:
+    import opik
+    OPIK_AVAILABLE = True
+except ImportError:
+    OPIK_AVAILABLE = False
+    # Create a dummy decorator for when opik is not available
+    class DummyOpik:
+        @staticmethod
+        def track(func):
+            return func
+    opik = DummyOpik()
 
 # Load a pre-trained Sentence Transformer model (e.g., 'all-MiniLM-L6-v2') - ideally retrieve this from app state ...
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")

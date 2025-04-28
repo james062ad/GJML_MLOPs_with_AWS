@@ -6,23 +6,28 @@ from server.src.models.document import RetrievedDocument  # Import the Pydantic 
 from fastapi import Depends
 import requests
 import json
-import opik
 import openai
 from openai import OpenAI
 from server.src.config import get_settings  # ✅ Correct lazy loading
+
+# Conditional import for opik to allow bypassing in tests
+try:
+    import opik
+    OPIK_AVAILABLE = True
+except ImportError:
+    OPIK_AVAILABLE = False
+    # Create a dummy decorator for when opik is not available
+    class DummyOpik:
+        @staticmethod
+        def track(func):
+            return func
+    opik = DummyOpik()
 
 # ----current code ----
 client = OpenAI()
 
 # ----AWS code ----
-# Initialize AWS Bedrock client
-# bedrock_client = boto3.client(
-#     service_name='bedrock-runtime',
-#     region_name=settings.aws_region,
-#     aws_access_key_id=settings.aws_access_key_id,
-#     aws_secret_access_key=settings.aws_secret_access_key,
-#     aws_session_token=settings.aws_session_token
-# )
+# No global settings or bedrock_client instantiation at import time!
 
 
 @opik.track  # TODO: test if this works with async methods? I think it will.
@@ -52,6 +57,17 @@ def call_llm(prompt: str) -> Union[Dict, None]:
 
     # ----AWS code ----
     # try:
+    #     settings = get_settings()  # ✅ Load settings inside try block
+    #
+    #     # Initialize Bedrock client dynamically
+    #     bedrock_client = boto3.client(
+    #         service_name='bedrock-runtime',
+    #         region_name=settings.aws_region,
+    #         aws_access_key_id=settings.aws_access_key_id.get_secret_value(),
+    #         aws_secret_access_key=settings.aws_secret_access_key.get_secret_value(),
+    #         aws_session_token=settings.aws_session_token.get_secret_value() if settings.aws_session_token else None,
+    #     )
+    #
     #     # Prepare the request body for Bedrock
     #     request_body = {
     #         "prompt": prompt,
@@ -73,7 +89,6 @@ def call_llm(prompt: str) -> Union[Dict, None]:
     #     data = {"response": response_body.get('completion')}
     #
     #     # Note: Bedrock might not provide token usage information in the same format as OpenAI
-    #     # Adjust this part based on the actual response format from Bedrock
     #     if 'usage' in response_body:
     #         data["response_tokens_per_second"] = (
     #             (response_body['usage']['total_tokens'] / response_body['usage']['completion_tokens'])
@@ -108,7 +123,7 @@ async def generate_response(
 
     Args:
         query (str): The user query.
-        context (List[Dict]): The list of documents retrieved from the retrieval service.
+        chunks (List[Dict]): The list of documents retrieved from the retrieval service.
         max_tokens (int): The maximum number of tokens to generate in the response.
         temperature (float): Sampling temperature for the model.
     """
@@ -120,7 +135,7 @@ async def generate_response(
     Answer:
     """
     # Concatenate documents' summaries as the context for generation
-    context = "\n".join([chunk["chunk"] for chunk in chunks])
+    context = "\n".join([chunk["text"] for chunk in chunks])
     prompt = QUERY_PROMPT.format(context=context, query=query)
     print(f"calling call_llm ...")
     response = call_llm(prompt)
@@ -136,7 +151,7 @@ async def generate_response(
     # Answer:
     # """
     # # Concatenate documents' summaries as the context for generation
-    # context = "\n".join([chunk["chunk"] for chunk in chunks])
+    # context = "\n".join([chunk["text"] for chunk in chunks])
     # prompt = QUERY_PROMPT.format(context=context, query=query)
     # print(f"calling Bedrock API...")
     # response = call_llm(prompt)

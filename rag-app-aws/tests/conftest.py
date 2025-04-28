@@ -5,6 +5,37 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
+# Configure pytest-asyncio
+def pytest_configure(config):
+    """Configure pytest to handle asyncio properly."""
+    config.addinivalue_line(
+        "asyncio_mode",
+        "auto"
+    )
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for the test session."""
+    import asyncio
+    try:
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(autouse=True)
+def mock_opik_tracking():
+    """Mock the opik.track decorator to bypass OPIK during tests."""
+    # Create a simple pass-through decorator
+    def dummy_decorator(f):
+        return f
+    with patch('opik.track', dummy_decorator):
+        yield
+
+
 @pytest.fixture(autouse=True)
 def mock_sentence_transformer():
     """Mock the SentenceTransformer module to avoid loading the real model during tests."""
@@ -25,9 +56,12 @@ def mock_query():
 def mock_chunks():
     """Fixture to provide mock retrieved document chunks for generation tests."""
     return [
-        {"text": "Perovskite materials are used in solar cells."},
-        {"text": "Perovskites have unique electronic properties."},
-        {"text": "The efficiency of perovskite solar cells has improved."},
+        # {"text": "Perovskite materials are used in solar cells."},
+        # {"text": "Perovskites have unique electronic properties."},
+        # {"text": "The efficiency of perovskite solar cells has improved."},
+        {"id": 1, "title": "Paper 1", "text": "Perovskite materials are used in solar cells.", "similarity_score": 0.8},
+        {"id": 2, "title": "Paper 2", "text": "Perovskites have unique electronic properties.", "similarity_score": 0.7},
+        {"id": 3, "title": "Paper 3", "text": "The efficiency of perovskite solar cells has improved.", "similarity_score": 0.6},
     ]
 
 
@@ -82,13 +116,16 @@ def setup_test_database(db_config):
         );
         """)
         
+        # Create a 384-dimensional test vector (all 0.1)
+        test_vector = ','.join(['0.1'] * 384)
+        
         # Insert some test data
-        cursor.execute("""
+        cursor.execute(f"""
         INSERT INTO papers (title, chunk, embedding)
         VALUES 
-            ('Test Paper 1', 'Perovskite materials are used in solar cells.', '[0.1]'::vector(384)),
-            ('Test Paper 2', 'Perovskites have unique electronic properties.', '[0.1]'::vector(384)),
-            ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[0.1]'::vector(384))
+            ('Test Paper 1', 'Perovskite materials are used in solar cells.', '[{test_vector}]'::vector(384)),
+            ('Test Paper 2', 'Perovskites have unique electronic properties.', '[{test_vector}]'::vector(384)),
+            ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[{test_vector}]'::vector(384))
         ON CONFLICT DO NOTHING;
         """)
         

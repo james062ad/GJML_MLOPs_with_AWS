@@ -1,16 +1,17 @@
 """
-This is the main entry point for the backend application, this will define and instantiate the FastAPI server
-that uses the controllers, models and services defined in the rest of the sub-repo.
+This is the main entry point for the backend application. This will define and instantiate the FastAPI server
+that uses the controllers, models, and services defined in the rest of the sub-repo.
 
-For development purposes this will run on localhost:8000
+For development purposes, this will run on localhost:8000
 """
 
 # server/src/main.py
-from fastapi import FastAPI, Depends
+
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from controllers import retrieval, health_check, generation
 from sentence_transformers import SentenceTransformer
-from server.src.config import get_settings  # 🛠 import get_settings here
+from server.src.config import get_settings  # ✅ Correct lazy import
 import opik
 
 # Async context manager to load in models I want to keep in memory for the app to use.
@@ -41,7 +42,7 @@ async def lifespan_context(app: FastAPI):
         print("Cleaning up embedding model...")
         del embedding_model
 
-
+# Create the FastAPI application
 app = FastAPI(lifespan=lifespan_context)
 
 # Include routers

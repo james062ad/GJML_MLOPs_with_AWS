@@ -35,6 +35,12 @@ pre-commit = "^4.0.1"
 pythonpath = [
   "."
 ]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
 
 [build-system]
 requires = ["poetry-core"]

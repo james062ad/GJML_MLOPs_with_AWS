@@ -335,160 +335,145 @@ The script performs the following operations:
    ./setup-aws-bedrock.sh --help
    ```
 
+
+
 ## Adapting RAG App to Work with AWS Bedrock
 
-To transition the RAG application from using direct AWS services to AWS Bedrock, several files need to be modified. This section outlines the necessary changes and what they replace.
+To transition the RAG application from using OpenAI to AWS Bedrock, several updates are required across configuration and service code. Below are the exact steps to adapt the app.
 
-### Files Requiring Changes
+---
 
-#### 1. Configuration Files
+### 1. Update Configuration (`config.py`)
 
-**`rag-app-aws/server/src/config.py`**
-- **Add:** AWS Bedrock configuration parameters
-  ```python
-  # AWS Bedrock config
-  aws_region: str = Field(..., env="AWS_REGION")
-  aws_access_key_id: str = Field(..., env="AWS_ACCESS_KEY_ID")
-  aws_secret_access_key: str = Field(..., env="AWS_SECRET_ACCESS_KEY")
-  aws_session_token: str = Field(None, env="AWS_SESSION_TOKEN")  # Optional, for temporary credentials
-  bedrock_model_id: str = Field(..., env="BEDROCK_MODEL_ID")  # e.g., "amazon.titan-text-express-v1"
-  ```
-- **Replace:** Any existing AWS service-specific configuration parameters
+- Remove OpenAI-specific fields (`openai_api_key`, `openai_model`).
+- Add AWS Bedrock fields:
 
-**`rag-app-aws/server/src/config_loader.py`**
-- **Add:** Bedrock configuration loading logic
-  ```python
-  # Handle Bedrock configuration
-  if cls._config.get("generation", {}).get("model") == "bedrock":
-      gen_config = cls._config.get("generation", {})
-      
-      # Update Bedrock settings
-      if hasattr(settings, "bedrock_model_id"):
-          settings.bedrock_model_id = gen_config.get("bedrock_model_id")
-      if hasattr(settings, "aws_region"):
-          settings.aws_region = gen_config.get("aws_region")
-  ```
-- **Add:** Bedrock-specific configuration retrieval methods
-  ```python
-  @classmethod
-  def is_using_bedrock(cls) -> bool:
-      """Check if AWS Bedrock is enabled in config."""
-      return cls._config.get("generation", {}).get("model") == "bedrock"
-  ```
-- **Replace:** Any existing AWS service-specific configuration loading logic
+```python
+aws_region: str = Field(..., env="AWS_REGION")
+bedrock_model_id: str = Field(..., env="BEDROCK_MODEL_ID")
+```
 
-#### 2. Service Implementation Files
+- Ensure your `.env` file contains:
 
-**`rag-app-aws/server/src/services/generation_service.py`**
-- **Add:** Bedrock client initialization
-  ```python
-  # Initialize AWS Bedrock client
-  bedrock_client = boto3.client(
-      service_name='bedrock-runtime',
-      region_name=settings.aws_region,
-      aws_access_key_id=settings.aws_access_key_id,
-      aws_secret_access_key=settings.aws_secret_access_key,
-      aws_session_token=settings.aws_session_token
-  )
-  ```
-- **Add:** Bedrock API invocation code
-  ```python
-  # Prepare the request body for Bedrock
-  request_body = {
-      "prompt": prompt,
-      "maxTokens": max_tokens,
-      "temperature": temperature,
-      "topP": top_p,
-      "stopSequences": stop_sequences
-  }
-  
-  # Call Bedrock API
-  response = bedrock_client.invoke_model(
-      modelId=settings.bedrock_model_id,
-      body=json.dumps(request_body)
-  )
-  
-  # Parse the response
-  response_body = json.loads(response.get('body').read())
-  generated_text = response_body.get('completion', '')
-  ```
-- **Replace:** Any existing AWS service-specific generation code (e.g., SageMaker, Lambda)
+```dotenv
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-v2
+```
 
-#### 3. Embedding Service
+---
 
-**`rag-app-aws/server/src/ingestion/embeddings.py`**
-- **Add:** Bedrock embedding model initialization
-  ```python
-  # Initialize Bedrock client for embeddings
-  bedrock_client = boto3.client(
-      service_name='bedrock-runtime',
-      region_name=settings.aws_region,
-      aws_access_key_id=settings.aws_access_key_id,
-      aws_secret_access_key=settings.aws_secret_access_key,
-      aws_session_token=settings.aws_session_token
-  )
-  ```
-- **Add:** Bedrock embedding generation code
-  ```python
-  def get_embeddings(texts):
-      embeddings = []
-      for text in texts:
-          request_body = {
-              "inputText": text
-          }
-          
-          response = bedrock_client.invoke_model(
-              modelId=settings.bedrock_embedding_model_id,
-              body=json.dumps(request_body)
-          )
-          
-          response_body = json.loads(response.get('body').read())
-          embedding = response_body.get('embedding', [])
-          embeddings.append(embedding)
-      
-      return embeddings
-  ```
-- **Replace:** The current SentenceTransformer implementation (`model = SentenceTransformer('all-MiniLM-L6-v2')`)
+### 2. Modify `services/generation_service.py`
 
-#### 4. Dependencies
+- **Remove** OpenAI client initialization:
 
-**`rag-app-aws/pyproject.toml`**
-- **Add:** AWS Bedrock SDK dependency
-  ```toml
-  [tool.poetry.dependencies]
-  boto3 = "^1.28.0"
-  ```
-- **Replace:** Any AWS service-specific SDK dependencies that are no longer needed
+```python
+import openai
+from openai import OpenAI
+client = OpenAI()
+```
 
-### Implementation Strategy
+- **Add** AWS Bedrock client initialization:
 
-1. **Configuration First:** Start by updating the configuration files to support Bedrock parameters.
-2. **Service Implementation:** Modify the generation service to use Bedrock instead of direct AWS services.
-3. **Embedding Service:** Update the embedding service to use Bedrock's embedding models.
-4. **Testing:** Test each component individually before integrating them.
-5. **Fallback Mechanism:** Implement a fallback mechanism to use the original AWS services if Bedrock is not available.
+```python
+import boto3
+import json
 
-### Environment Variables
+bedrock_client = boto3.client(
+    service_name='bedrock-runtime',
+    region_name=settings.aws_region
+)
+```
 
-Ensure the following environment variables are set:
-- `AWS_REGION`: The AWS region where Bedrock is available
-- `AWS_ACCESS_KEY_ID`: Your AWS access key
-- `AWS_SECRET_ACCESS_KEY`: Your AWS secret key
-- `AWS_SESSION_TOKEN`: (Optional) Your AWS session token for temporary credentials
-- `BEDROCK_MODEL_ID`: The ID of the Bedrock model to use (e.g., "amazon.titan-text-express-v1")
-- `BEDROCK_EMBEDDING_MODEL_ID`: The ID of the Bedrock embedding model to use
+- **Update `call_llm(prompt: str)` to use Bedrock:**
 
-### Testing Bedrock Integration
+```python
+@opik.track
+def call_llm(prompt: str) -> dict:
+    try:
+        body = json.dumps({
+            "prompt": prompt,
+            "max_tokens_to_sample": settings.max_tokens,
+            "temperature": settings.temperature,
+            "top_p": settings.top_p
+        })
 
-After implementing the changes, test the Bedrock integration with:
+        response = bedrock_client.invoke_model(
+            modelId=settings.bedrock_model_id,
+            body=body,
+            contentType="application/json",
+            accept="application/json"
+        )
+
+        response_body = json.loads(response['body'].read())
+
+        data = {"response": response_body.get("completion", "")}
+        print(f"call_llm returning {data}")
+        return data
+    except Exception as e:
+        print(f"Error calling AWS Bedrock API: {e}")
+        return None
+```
+
+- **Update `generate_response(query, chunks, ...)` to call the updated `call_llm()`:**
+
+```python
+@opik.track
+async def generate_response(
+    query: str,
+    chunks: List[Dict],
+    max_tokens: int = 200,
+    temperature: float = 0.7,
+) -> Dict:
+    QUERY_PROMPT = '''
+    You are a helpful AI language assistant, please use the following context to answer the query. Answer in English.
+    Context: {context}
+    Query: {query}
+    Answer:
+    '''
+    context = "\n".join([chunk["text"] for chunk in chunks])
+    prompt = QUERY_PROMPT.format(context=context, query=query)
+
+    print(f"Calling call_llm with prompt...")
+    response = call_llm(prompt)
+
+    print(f"generate_response returning {response}")
+    return response
+```
+
+---
+
+### 3. (Optional) Modify Embeddings (`ingestion/embeddings.py`)
+
+If you want to replace local SentenceTransformer embeddings with Bedrock embeddings:
+- Replace the SentenceTransformer model with Bedrock's embedding model API using `invoke_model`.
+- Otherwise, no changes needed — app will still use local embedding generation.
+
+---
+
+### 4. No Changes Needed In
+
+- `controllers/generation.py`
+- `controllers/retrieval.py`
+- `controllers/health_check.py`
+- `services/query_expansion_service.py`
+- `models/`
+- `config_loader.py`
+
+---
+
+### 5. Install Boto3 if not installed
 
 ```bash
-# Test Bedrock model access
-aws bedrock list-foundation-models --region $AWS_REGION
-
-# Test Bedrock model invocation
-aws bedrock invoke-model \
-  --model-id amazon.titan-text-express-v1 \
-  --body '{"prompt": "Hello, how are you?", "maxTokens": 100}' \
-  --region $AWS_REGION
+pip install boto3
 ```
+
+---
+
+### 6. Final Checklist Before Running
+
+✅ Set AWS credentials properly (either via `aws configure` or environment variables).  
+✅ Set `AWS_REGION` and `BEDROCK_MODEL_ID` in your `.env`.  
+✅ Update `config.py` as above.  
+✅ Update `generation_service.py` as above.
+
+You are now ready to run your app with AWS Bedrock!

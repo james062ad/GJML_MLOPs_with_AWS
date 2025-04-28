@@ -1,9 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import numpy as np
-
-from pydantic import BaseModel
-from typing import Optional
 
 
 class RetrievedDocument(BaseModel):
@@ -12,8 +9,7 @@ class RetrievedDocument(BaseModel):
     chunk: str
     similarity_score: float
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)  # Replaces orm_mode=True
 
 
 class Document(BaseModel):
@@ -33,5 +29,4 @@ class Document(BaseModel):
         description="Optional metadata associated with the document, such as publication date, authors, or tags",
     )
 
-    class Config:
-        orm_mode = True  # Enables ORM compatibility, useful when integrating with SQLAlchemy or other ORMs
+    model_config = ConfigDict(from_attributes=True)  # Replaces orm_mode=True
