@@ -77,19 +77,48 @@ set_secret_from_env() {
 
 # List of secrets to set (add more here if needed)
 SECRETS_LIST=(
+    # Core App Config
+    "LLM_PROVIDER"
+    "ENVIRONMENT"
+    "APP_NAME"
+    "DEBUG"
+
+    # Database
     "POSTGRES_USER"
     "POSTGRES_PASSWORD"
-    "OPIK_API_KEY"
-    "OPIK_WORKSPACE"
-    "OPIK_PROJECT_NAME"
-    "OPENAI_API_KEY"
+    "POSTGRES_DB"
+    "POSTGRES_PORT"
+    "POSTGRES_HOST"
+
+    # Data Ingestion
     "ARXIV_API_URL"
+    "DATA_PATH"
+
+    # Model Generation
+    "TEMPERATURE"
+    "TOP_P"
+    "MAX_TOKENS"
+
+    # OpenAI
+    "OPENAI_API_KEY"
+    "OPENAI_MODEL"
+
+    # AWS Bedrock
     "AWS_ACCESS_KEY_ID"
     "AWS_SECRET_ACCESS_KEY"
     "AWS_SESSION_TOKEN"
     "AWS_REGION"
     "BEDROCK_MODEL_ID"
     "BEDROCK_EMBEDDING_MODEL_ID"
+
+    # Ollama
+    "OLLAMA_URL"
+    "OLLAMA_MODEL"
+
+    # Opik
+    "OPIK_API_KEY"
+    "OPIK_WORKSPACE"
+    "OPIK_PROJECT_NAME"
 )
 
 # Set all secrets

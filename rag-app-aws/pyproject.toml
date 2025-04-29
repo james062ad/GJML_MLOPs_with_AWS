@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "rag-app-aws"
+name = "rag-app"
 version = "0.1.0"
 description = "A simple rag application to help AI engineers in training on Oxford's GenAI, Cloud and MLOps course."
 authors = ["Andrew P. McMahon"]
@@ -34,12 +34,6 @@ pre-commit = "^4.0.1"
 [tool.pytest.ini_options]
 pythonpath = [
   "."
-]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore::UserWarning",
 ]
 
 [build-system]

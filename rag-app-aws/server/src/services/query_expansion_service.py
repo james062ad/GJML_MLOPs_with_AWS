@@ -1,25 +1,21 @@
-from server.src.services.generation_service import generate_response, call_llm
-from typing import Dict, Union
+from server.src.services.generation_service import call_llm
+from typing import Union
 import opik
 
 
 @opik.track
 def expand_query(query: str) -> Union[str, None]:
     """
-    Expands the query by generating a response using the OpenAI API.
-
-    Args:
-        query (str): The input query to be expanded.
-
-    Returns:
-        str: The expanded query.
+    Expands the query using the active LLM provider via call_llm().
+    Supports OpenAI, AWS Bedrock, or Ollama depending on config.
     """
     expansion_prompt = f"""
-    Expand the following query, specifically add relevant synoyms for key topics and phrases, do this such that
-    you increase the chances of a relevant retrieval from the knowledge base. Consider that the database contains
-    data pertaining to the topic in hand but it may not be extensive. The expanded query that you return should
-    include the original query I provide to you below as well.
+    Expand the following query, specifically add relevant synonyms for key topics and phrases.
+    Your goal is to increase the chances of a relevant retrieval from the knowledge base.
 
     Query: {query}
     """
-    return call_llm(expansion_prompt)["response"].replace('"', "")
+    result = call_llm(expansion_prompt)
+    if result and "response" in result:
+        return result["response"].replace('"', "")
+    return None
