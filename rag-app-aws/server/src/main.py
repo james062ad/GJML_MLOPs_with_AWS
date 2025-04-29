@@ -12,10 +12,6 @@ from controllers import retrieval, health_check, generation
 from sentence_transformers import SentenceTransformer
 from server.src.config import Settings
 import opik
-import logging
-
-# Configure logging
-logger = logging.getLogger(__name__)
 
 # Async context manager to load in models I want to keep in memory for the app to use.
 @asynccontextmanager
@@ -25,20 +21,12 @@ async def lifespan_context(app: FastAPI):
     """
     print("Spinning up lifespan context...")
 
-    # Try to configure OPIK, but don't fail if it's not available
-    try:
-        print("Configuring OPIK...")
-        opik.configure()
-        print("OPIK configured successfully")
-    except Exception as e:
-        logger.warning(f"OPIK configuration failed (this is okay in test environment): {str(e)}")
+    print("Configure opik...")
+    opik.configure()
 
+    # Note below is not actually being passed around the app, needs work!
     print("Loading embedding model...")
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")  # Load the model
-
-    # Use the global settings instance
-    print(f"Environment loaded: {Settings.environment}")
-
     try:
         yield {
             "embedding_model": embedding_model

@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
-from services.generation_service import generate_response, safe_opik_track
+from services.generation_service import generate_response
 from services.retrieval_service import retrieve_top_k_chunks
 from services.query_expansion_service import expand_query
 from models.document import RetrievedDocument
 import os
 from config import settings
+import opik
 
 router = APIRouter()
 
@@ -18,7 +19,8 @@ db_config = {
     "port": os.environ.get("POSTGRES_PORT"),
 }
 
-@safe_opik_track
+# TODO: move all this model config to config files!
+@opik.track
 @router.get("/generate")
 async def generate_answer_endpoint(
     query: str = Query(..., description="The query text from the user"),
@@ -40,27 +42,30 @@ async def generate_answer_endpoint(
     Returns:
         str: The generated answer based on the query and retrieved chunks.
     """
+
     try:
-        # First retrieve relevant chunks
+        query_expanded = False
+        # query = expand_query(query)
+        # print(f"Expanded query is: {query} and of type {type(query)}")
+        # if not query:
+        #     raise HTTPException(status_code=400, detail="Query expansion failed.")
+        # else:
+        #     query_expanded = True
+
+        # Retrieve documents
         chunks = retrieve_top_k_chunks(query, top_k, db_config=db_config)
-        
-        # Then generate a response based on those chunks
-        response = await generate_response(
-            query=query,
-            chunks=chunks,
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
-        
-        if not response:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to generate response"
-            )
-            
-        return response
+        if not chunks:
+            raise HTTPException(status_code=404, detail="No documents found.")
+
+        # Pass the RetrievedDocument objects directly
+        generated_response = await generate_response(
+            query, chunks, max_tokens, temperature
+        )  # is this sync?
+        generated_response["query_expanded"] = query_expanded
+        print(f"Generated response {generated_response}")
+        return generated_response  # {"response": generated_response}
+
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Error generating answer: {str(e)}"
+            status_code=500, detail=f"Error generating response: {str(e)}"
         )
