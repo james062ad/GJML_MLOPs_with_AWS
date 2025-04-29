@@ -4,7 +4,7 @@ from services.retrieval_service import retrieve_top_k_chunks
 from models.document import Document, RetrievedDocument
 from dotenv import load_dotenv
 import os
-import opik
+from services.generation_service import safe_opik_track
 
 load_dotenv()
 
@@ -22,8 +22,7 @@ db_config = {
 
 router = APIRouter()
 
-
-@opik.track
+@safe_opik_track
 @router.get("/retrieve", response_model=List[RetrievedDocument])
 async def retrieve_top_k_chunks_endpoint(
     query: str = Query(..., description="The query text from the user"),

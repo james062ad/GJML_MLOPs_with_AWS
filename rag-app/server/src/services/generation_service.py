@@ -1,94 +1,95 @@
-import boto3
-from botocore.exceptions import ClientError
-import os
-from typing import List, Dict, Union
-from server.src.models.document import RetrievedDocument  # Import the Pydantic model
-from server.src.config import Settings
-from fastapi import Depends
-import requests
 import json
-from server.src.config import settings
+import requests
+from typing import List, Dict, Union
 import opik
-import openai
-from openai import OpenAI
+from server.src.config import settings
 
-#----current code ----
-client = OpenAI()
-#----AWS code ----
-# Initialize AWS Bedrock client
-# bedrock_client = boto3.client(
-#     service_name='bedrock-runtime',
-#     region_name=settings.aws_region,
-#     aws_access_key_id=settings.aws_access_key_id,
-#     aws_secret_access_key=settings.aws_secret_access_key,
-#     aws_session_token=settings.aws_session_token
-# )
 
-@opik.track  # TODO: test if this works with async methods? I think it will.
+# ─────────────────────────────────────────────────────────────
+# 🔁 PROVIDER-SPECIFIC CLIENT SETUP
+# ─────────────────────────────────────────────────────────────
+
+if settings.llm_provider == 'openai':
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=settings.openai_api_key)
+
+elif settings.llm_provider == 'bedrock':
+    import boto3
+    bedrock_client = boto3.client(
+        service_name='bedrock-runtime',
+        region_name=settings.aws_region
+    )
+
+elif settings.llm_provider == 'ollama':
+    import requests  # already imported, just kept for clarity
+
+# Future placeholders (do nothing yet but structure is ready)
+# elif settings.llm_provider == 'huggingface':
+# elif settings.llm_provider == 'azure':
+# elif settings.llm_provider == 'anthropic':
+# etc.
+
+# ─────────────────────────────────────────────────────────────
+# 🤖 call_llm: Unified Model Dispatcher
+# ─────────────────────────────────────────────────────────────
+
+@opik.track
 def call_llm(prompt: str) -> Union[Dict, None]:
-    """Call OpenAI's API to generate a response."""
-    #----current code ----
-    try:
-        response = client.chat.completions.create(
-            model=settings.openai_model,  # Ensure this model is defined in settings
-            messages=[{"role": "user", "content": prompt}],
-            temperature=settings.temperature,
-            max_tokens=settings.max_tokens,
-            top_p=settings.top_p,
-        )
+    """
+    Call the appropriate LLM backend based on the LLM_PROVIDER setting in the environment.
 
-        print("Successfully generated response")
-        data = {"response": response.choices[0].message.content}
-        data["response_tokens_per_second"] = (
-            (response.usage.total_tokens / response.usage.completion_tokens)
-            if hasattr(response, "usage")
-            else None
-        )
-        print(f"call_llm returning {data}")
-        print(f"data.response = {data['response']}")
-        return data
-    #----AWS code ----
-    # try:
-    #     # Prepare the request body for Bedrock
-    #     request_body = {
-    #         "prompt": prompt,
-    #         "max_tokens": settings.max_tokens,
-    #         "temperature": settings.temperature,
-    #         "top_p": settings.top_p,
-    #     }
-    #     
-    #     # Call Bedrock API
-    #     response = bedrock_client.invoke_model(
-    #         modelId=settings.bedrock_model_id,
-    #         body=json.dumps(request_body)
-    #     )
-    #     
-    #     # Parse the response
-    #     response_body = json.loads(response.get('body').read())
-    #     
-    #     print("Successfully generated response from Bedrock")
-    #     data = {"response": response_body.get('completion')}
-    #     
-    #     # Note: Bedrock might not provide token usage information in the same format as OpenAI
-    #     # Adjust this part based on the actual response format from Bedrock
-    #     if 'usage' in response_body:
-    #         data["response_tokens_per_second"] = (
-    #             (response_body['usage']['total_tokens'] / response_body['usage']['completion_tokens'])
-    #             if 'total_tokens' in response_body['usage'] and 'completion_tokens' in response_body['usage']
-    #             else None
-    #         )
-    #     
-    #     print(f"call_llm returning {data}")
-    #     print(f"data.response = {data['response']}")
-    #     return data
+    Returns:
+        dict: { "response": "<string>" }
+    """
+    try:
+        if settings.llm_provider == 'openai':
+            # 🔵 OpenAI GPT-3.5 / GPT-4
+            response = openai_client.chat.completions.create(
+                model=settings.openai_model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=settings.temperature,
+                max_tokens=settings.max_tokens,
+                top_p=settings.top_p
+            )
+            return {"response": response.choices[0].message.content}
+
+        elif settings.llm_provider == 'bedrock':
+            # 🟠 AWS Bedrock (Anthropic Claude, Titan, etc.)
+            body = json.dumps({
+                "prompt": prompt,
+                "max_tokens_to_sample": settings.max_tokens,
+                "temperature": settings.temperature,
+                "top_p": settings.top_p
+            })
+
+            response = bedrock_client.invoke_model(
+                modelId=settings.bedrock_model_id,
+                body=body,
+                contentType="application/json",
+                accept="application/json"
+            )
+            response_body = json.loads(response['body'].read())
+            return {"response": response_body.get("completion", "")}
+
+        elif settings.llm_provider == 'ollama':
+            # 🐴 Ollama running locally (e.g. LLaMA2, Mistral)
+            response = requests.post(
+                f"{settings.ollama_url}/api/generate",
+                json={"model": settings.ollama_model, "prompt": prompt}
+            )
+            result = response.json()
+            return {"response": result.get("response", "")}
+
+        else:
+            raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
 
     except Exception as e:
-        print(f"Error calling OpenAI API: {e}")
-        return None  # TODO: error handling
-    #----AWS code ----
-    # except ClientError as e:
-    #     print(f"Error calling AWS Bedrock API: {e}")
-    #     return None  # TODO: error handling
+        print(f"[call_llm] Error with provider '{settings.llm_provider}': {e}")
+        return None
+
+# ─────────────────────────────────────────────────────────────
+# 🧠 generate_response: RAG prompt generator
+# ─────────────────────────────────────────────────────────────
 
 @opik.track
 async def generate_response(
@@ -96,43 +97,30 @@ async def generate_response(
     chunks: List[Dict],
     max_tokens: int = 200,
     temperature: float = 0.7,
-) -> Dict:  # str:
+) -> Dict:
     """
-    Generate a response using an Ollama endpoint running locally, t
-    his will be changed to allow for Bedrock later.
+    Generate a completion using retrieved documents + query context.
 
     Args:
-        query (str): The user query.
-        context (List[Dict]): The list of documents retrieved from the retrieval service.
-        max_tokens (int): The maximum number of tokens to generate in the response.
-        temperature (float): Sampling temperature for the model.
+        query (str): The user's original query.
+        chunks (List[Dict]): Contextual chunks retrieved by vector store.
+        max_tokens (int): Max tokens to generate.
+        temperature (float): Sampling temperature.
+
+    Returns:
+        Dict: The LLM response in standardized format.
     """
-    #----current code ----
-    QUERY_PROMPT = """
-    You are a helpful AI language assistant, please use the following context to answer the query. Answer in English.
+
+    # Build the unified prompt
+    QUERY_PROMPT = """You are a helpful AI assistant. Use the following context to answer the user's question.
     Context: {context}
-    Query: {query}
-    Answer:
-    """
-    # Concatenate documents' summaries as the context for generation
+    Question: {query}
+    Answer:"""
+
     context = "\n".join([chunk["text"] for chunk in chunks])
     prompt = QUERY_PROMPT.format(context=context, query=query)
-    print(f"calling call_llm ...")
+
+    print(f"[generate_response] Calling call_llm with provider: {settings.llm_provider}")
     response = call_llm(prompt)
-    print(f"generate_response returning {response}")
-    return response  # now this is a dict.
-    #----AWS code ----
-    # # The prompt format remains the same for Bedrock
-    # QUERY_PROMPT = """
-    # You are a helpful AI language assistant, please use the following context to answer the query. Answer in English.
-    # Context: {context}
-    # Query: {query}
-    # Answer:
-    # """
-    # # Concatenate documents' summaries as the context for generation
-    # context = "\n".join([chunk["chunk"] for chunk in chunks])
-    # prompt = QUERY_PROMPT.format(context=context, query=query)
-    # print(f"calling Bedrock API...")
-    # response = call_llm(prompt)
-    # print(f"generate_response returning {response}")
-    # return response
+    print(f"[generate_response] Response: {response}")
+    return response

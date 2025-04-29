@@ -1,22 +1,19 @@
-import os
 import json
 import requests
 from typing import List, Dict, Union
 import opik
 from server.src.config import settings
 
+
 # ─────────────────────────────────────────────────────────────
-# 📦 CONDITIONAL IMPORTS based on LLM_PROVIDER
+# 🔁 PROVIDER-SPECIFIC CLIENT SETUP
 # ─────────────────────────────────────────────────────────────
-# We only import the relevant SDK/client depending on the model provider
 
 if settings.llm_provider == 'openai':
-    # OpenAI client
     from openai import OpenAI
-    client = OpenAI(api_key=settings.openai_api_key)
+    openai_client = OpenAI(api_key=settings.openai_api_key)
 
 elif settings.llm_provider == 'bedrock':
-    # AWS Bedrock client
     import boto3
     bedrock_client = boto3.client(
         service_name='bedrock-runtime',
@@ -24,25 +21,30 @@ elif settings.llm_provider == 'bedrock':
     )
 
 elif settings.llm_provider == 'ollama':
-    # Ollama uses HTTP calls to localhost:11434
-    import requests
+    import requests  # already imported, just kept for clarity
 
+# Future placeholders (do nothing yet but structure is ready)
+# elif settings.llm_provider == 'huggingface':
+# elif settings.llm_provider == 'azure':
+# elif settings.llm_provider == 'anthropic':
+# etc.
 
 # ─────────────────────────────────────────────────────────────
-# 🤖 Unified LLM Call Function
+# 🤖 call_llm: Unified Model Dispatcher
 # ─────────────────────────────────────────────────────────────
+
 @opik.track
 def call_llm(prompt: str) -> Union[Dict, None]:
     """
-    Dispatches prompt to the correct LLM backend based on the value of settings.llm_provider.
-    
-    Returns a dictionary of form:
-        { "response": <string> }
+    Call the appropriate LLM backend based on the LLM_PROVIDER setting in the environment.
+
+    Returns:
+        dict: { "response": "<string>" }
     """
     try:
         if settings.llm_provider == 'openai':
-            # 🟢 Using OpenAI
-            response = client.chat.completions.create(
+            # 🔵 OpenAI GPT-3.5 / GPT-4
+            response = openai_client.chat.completions.create(
                 model=settings.openai_model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=settings.temperature,
@@ -52,7 +54,7 @@ def call_llm(prompt: str) -> Union[Dict, None]:
             return {"response": response.choices[0].message.content}
 
         elif settings.llm_provider == 'bedrock':
-            # 🟠 Using AWS Bedrock
+            # 🟠 AWS Bedrock (Anthropic Claude, Titan, etc.)
             body = json.dumps({
                 "prompt": prompt,
                 "max_tokens_to_sample": settings.max_tokens,
@@ -70,7 +72,7 @@ def call_llm(prompt: str) -> Union[Dict, None]:
             return {"response": response_body.get("completion", "")}
 
         elif settings.llm_provider == 'ollama':
-            # 🐴 Using Ollama (local LLaMA2 or similar)
+            # 🐴 Ollama running locally (e.g. LLaMA2, Mistral)
             response = requests.post(
                 f"{settings.ollama_url}/api/generate",
                 json={"model": settings.ollama_model, "prompt": prompt}
@@ -79,16 +81,16 @@ def call_llm(prompt: str) -> Union[Dict, None]:
             return {"response": result.get("response", "")}
 
         else:
-            raise ValueError(f"Unsupported LLM_PROVIDER: {settings.llm_provider}")
+            raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
 
     except Exception as e:
-        print(f"Error in call_llm for provider '{settings.llm_provider}': {e}")
+        print(f"[call_llm] Error with provider '{settings.llm_provider}': {e}")
         return None
 
+# ─────────────────────────────────────────────────────────────
+# 🧠 generate_response: RAG prompt generator
+# ─────────────────────────────────────────────────────────────
 
-# ─────────────────────────────────────────────────────────────
-# 🧠 Main RAG Generation Function
-# ─────────────────────────────────────────────────────────────
 @opik.track
 async def generate_response(
     query: str,
@@ -97,17 +99,28 @@ async def generate_response(
     temperature: float = 0.7,
 ) -> Dict:
     """
-    Uses call_llm() to generate a response to a user query based on retrieved context chunks.
+    Generate a completion using retrieved documents + query context.
+
+    Args:
+        query (str): The user's original query.
+        chunks (List[Dict]): Contextual chunks retrieved by vector store.
+        max_tokens (int): Max tokens to generate.
+        temperature (float): Sampling temperature.
+
+    Returns:
+        Dict: The LLM response in standardized format.
     """
-    QUERY_PROMPT = """
-    You are a helpful AI language assistant. Use the context below to answer the query:
+
+    # Build the unified prompt
+    QUERY_PROMPT = """You are a helpful AI assistant. Use the following context to answer the user's question.
     Context: {context}
-    Query: {query}
-    Answer:
-    """
-    # Combine the retrieved documents into one input string
+    Question: {query}
+    Answer:"""
+
     context = "\n".join([chunk["text"] for chunk in chunks])
     prompt = QUERY_PROMPT.format(context=context, query=query)
 
-    print(f"[generate_response] Calling call_llm() with prompt using provider: {settings.llm_provider}")
-    return call_llm(prompt)
+    print(f"[generate_response] Calling call_llm with provider: {settings.llm_provider}")
+    response = call_llm(prompt)
+    print(f"[generate_response] Response: {response}")
+    return response

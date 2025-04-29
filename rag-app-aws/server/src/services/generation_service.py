@@ -1,7 +1,8 @@
 import boto3
 from botocore.exceptions import ClientError
 import os
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Callable
+from functools import wraps
 from server.src.models.document import RetrievedDocument  # Import the Pydantic model
 from server.src.config import Settings
 from fastapi import Depends
@@ -11,6 +12,24 @@ from server.src.config import settings
 import opik
 import openai
 from openai import OpenAI
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Create a safe version of the opik.track decorator that won't fail if OPIK is not configured
+def safe_opik_track(func: Callable) -> Callable:
+    """A wrapper that makes opik.track optional - will not fail if OPIK is not configured."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            # Try to use OPIK tracking
+            return opik.track(func)(*args, **kwargs)
+        except Exception as e:
+            logger.warning(f"OPIK tracking failed (this is okay in test environment): {str(e)}")
+            # If OPIK fails, just call the function directly
+            return func(*args, **kwargs)
+    return wrapper
 
 #----current code ----
 client = OpenAI()
@@ -24,7 +43,7 @@ client = OpenAI()
 #     aws_session_token=settings.aws_session_token
 # )
 
-@opik.track  # TODO: test if this works with async methods? I think it will.
+@safe_opik_track
 def call_llm(prompt: str) -> Union[Dict, None]:
     """Call OpenAI's API to generate a response."""
     #----current code ----
@@ -83,14 +102,14 @@ def call_llm(prompt: str) -> Union[Dict, None]:
     #     return data
 
     except Exception as e:
-        print(f"Error calling OpenAI API: {e}")
+        logger.error(f"Error calling LLM: {str(e)}")
         return None  # TODO: error handling
     #----AWS code ----
     # except ClientError as e:
     #     print(f"Error calling AWS Bedrock API: {e}")
     #     return None  # TODO: error handling
 
-@opik.track
+@safe_opik_track
 async def generate_response(
     query: str,
     chunks: List[Dict],
