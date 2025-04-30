@@ -1,71 +1,61 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List
 from services.generation_service import generate_response
 from services.retrieval_service import retrieve_top_k_chunks
-from services.query_expansion_service import expand_query
-from models.document import RetrievedDocument
-import os
-from config import settings
-import opik
+from server.src.config import settings
+import traceback
 
 router = APIRouter()
 
-# Reuse your database configuration
-db_config = {
-    "dbname": os.environ.get("POSTGRES_DB"),
-    "user": os.environ.get("POSTGRES_USER"),
-    "password": os.environ.get("POSTGRES_PASSWORD"),
-    "host": os.environ.get("POSTGRES_HOST"),
-    "port": os.environ.get("POSTGRES_PORT"),
-}
 
-# TODO: move all this model config to config files!
-@opik.track
 @router.get("/generate")
-async def generate_answer_endpoint(
-    query: str = Query(..., description="The query text from the user"),
-    top_k: int = Query(5, description="Number of top chunks to retrieve"),
-    max_tokens: int = Query(
-        200, description="The maximum number of tokens to generate"
-    ),
-    temperature: float = Query(0.7, description="Sampling temperature for the model"),
+def generate(
+    query: str,
+    top_k: int = 5,
+    max_tokens: int = 200,
+    temperature: float = 0.7,
+    llm_provider: str = Query(None, description="Override LLM provider"),
+    embedding_provider: str = Query(
+        None, description="Override embedding provider"),
 ):
     """
-    Retrieve the top K relevant chunks and generate a response based on them.
-
-    Args:
-        query (str): The query text from the user.
-        top_k (int): Number of top chunks to retrieve.
-        max_tokens (int): Maximum number of tokens to generate in the response.
-        temperature (float): Temperature setting for the generation model.
-
-    Returns:
-        str: The generated answer based on the query and retrieved chunks.
+    FastAPI endpoint to generate a response from user query using top-k RAG retrieval.
     """
 
     try:
-        query_expanded = False
-        # query = expand_query(query)
-        # print(f"Expanded query is: {query} and of type {type(query)}")
-        # if not query:
-        #     raise HTTPException(status_code=400, detail="Query expansion failed.")
-        # else:
-        #     query_expanded = True
+        # 🧠 Override providers if passed from frontend
+        if llm_provider:
+            settings.llm_provider = llm_provider
+        if embedding_provider:
+            settings.embedding_provider = embedding_provider
 
-        # Retrieve documents
-        chunks = retrieve_top_k_chunks(query, top_k, db_config=db_config)
-        if not chunks:
-            raise HTTPException(status_code=404, detail="No documents found.")
+        print(f"🧪 Received query: {query}")
+        print(
+            f"🔁 Using LLM: {settings.llm_provider} | Embedding: {settings.embedding_provider}")
 
-        # Pass the RetrievedDocument objects directly
-        generated_response = await generate_response(
-            query, chunks, max_tokens, temperature
-        )  # is this sync?
-        generated_response["query_expanded"] = query_expanded
-        print(f"Generated response {generated_response}")
-        return generated_response  # {"response": generated_response}
+        # Step 1: Retrieve relevant chunks
+        db_config = {
+            "dbname": settings.postgres_db,
+            "user": settings.postgres_user,
+            "password": settings.postgres_password,
+            "host": settings.postgres_host,
+            "port": settings.postgres_port,
+        }
+
+        chunks = retrieve_top_k_chunks(query, top_k=top_k, db_config=db_config)
+        print(f"🧪 Retrieved {len(chunks)} chunks")
+
+        # Step 2: Generate a response using the retrieved context
+        result = generate_response(
+            query, chunks, max_tokens=max_tokens, temperature=temperature)
+        print("🧪 generate_response returned:", result)
+
+        if not result or "response" not in result:
+            raise ValueError(f"Missing 'response' in LLM result: {result}")
+
+        return result
 
     except Exception as e:
+        print("❌ Exception in /generate endpoint:")
+        traceback.print_exc()
         raise HTTPException(
-            status_code=500, detail=f"Error generating response: {str(e)}"
-        )
+            status_code=500, detail=f"Error generating response: {e}")

@@ -37,9 +37,11 @@ download-data:
 
 # Note that the below is ingestion of the downloaded jsons, not downloading of arxiv data.
 # Note that this will trigger a download of hugging face embedding models if not already cached. TODO: replace with Bedrock.
+#run-ingestion:
+#	poetry run python $(SERVER_DIR)/src/ingestion/pipeline.py
 run-ingestion:
-	poetry run python $(SERVER_DIR)/src/ingestion/pipeline.py
-
+	poetry run python -m server.src.ingestion.pipeline
+	
 # Lint the project (using Ruff)
 lint:
 	poetry run ruff $(SERVER_DIR)

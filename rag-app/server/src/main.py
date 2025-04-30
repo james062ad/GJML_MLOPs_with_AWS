@@ -8,7 +8,7 @@ For development purposes this will run on localhost:8000
 # server/src/main.py
 from fastapi import FastAPI, Depends
 from contextlib import asynccontextmanager
-from controllers import retrieval, health_check, generation
+from controllers import retrieval, health_check, generation, ingestion
 from sentence_transformers import SentenceTransformer
 from server.src.config import Settings
 import opik
@@ -42,7 +42,7 @@ app = FastAPI(lifespan=lifespan_context)
 app.include_router(retrieval.router)
 app.include_router(health_check.router)
 app.include_router(generation.router)
-
+app.include_router(ingestion.router)
 
 @app.get("/")
 async def read_root():

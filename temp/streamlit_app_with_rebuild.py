@@ -3,7 +3,6 @@ import requests
 import time
 from datetime import datetime
 
-
 # Custom CSS for improved styling
 
 

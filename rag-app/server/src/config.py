@@ -1,39 +1,40 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, SecretStr
+
 
 class Settings(BaseSettings):
-    # Define your configuration fields here with optional defaults
+    # ─── Environment ───────────────────────────────────────────
     environment: str = Field(..., env="ENVIRONMENT")
     app_name: str = Field(..., env="APP_NAME")
     debug: bool = Field(..., env="DEBUG")
 
-    # database config
-    # database_url: str = Field(..., env="DATABASE_URL")
+    # ─── Database ──────────────────────────────────────────────
     postgres_host: str = Field(..., env="POSTGRES_HOST")
-    postgres_port: int = 5432  # default
+    postgres_port: int = 5432
     postgres_db: str = Field(..., env="POSTGRES_DB")
     postgres_user: str = Field(..., env="POSTGRES_USER")
     postgres_password: str = Field(..., env="POSTGRES_PASSWORD")
 
-    # ingestion config
+    # ─── Ingestion ─────────────────────────────────────────────
     arxiv_api_url: str = Field(..., env="ARXIV_API_URL")
     data_path: str = Field(..., env="DATA_PATH")
 
-    # Generation model config
+    # ─── Model Configuration ───────────────────────────────────
+    # for generation
+    llm_provider: str = Field(..., env="LLM_PROVIDER")
+    # for retrieval/ingestion
+    embedding_provider: str = Field(..., env="EMBEDDING_PROVIDER")
+
     temperature: float = Field(..., env="TEMPERATURE")
     top_p: float = Field(..., env="TOP_P")
     max_tokens: int = Field(..., env="MAX_TOKENS")
 
-    # Comet config for Opik
-    opik_api_key: str = Field(..., env="OPIK_API_KEY")
-    opik_workspace: str = Field(..., env="OPIK_WORKSPACE")
-    opik_project_name: str = Field(..., env="OPIK_PROJECT_NAME")
-
-    # OpenAI config
-    openai_model: str = Field(..., env="OPENAI_MODEL")
+    # ─── OpenAI ────────────────────────────────────────────────
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
+    openai_model: str = Field(..., env="OPENAI_MODEL")
+    openai_embedding_model: str = Field(..., env="OPENAI_EMBEDDING_MODEL")
 
-
+    # ─── AWS Bedrock ───────────────────────────────────────────
     aws_region: str = Field(..., env="AWS_REGION")
     aws_access_key_id: SecretStr = Field(..., env="AWS_ACCESS_KEY_ID")
     aws_secret_access_key: SecretStr = Field(..., env="AWS_SECRET_ACCESS_KEY")
@@ -42,9 +43,21 @@ class Settings(BaseSettings):
     bedrock_embedding_model_id: str = Field(...,
                                             env="BEDROCK_EMBEDDING_MODEL_ID")
 
+    # ─── Ollama ───────────────────────────────────────────────
+    ollama_url: str = Field(..., env="OLLAMA_URL")
+    ollama_model: str = Field(..., env="OLLAMA_MODEL")
+    ollama_embedding_model: str = Field(..., env="OLLAMA_EMBEDDING_MODEL")
+
+    # ─── Tracing (Opik) ─────────────────────────────────────────
+    opik_api_key: str = Field(..., env="OPIK_API_KEY")
+    opik_workspace: str = Field(..., env="OPIK_WORKSPACE")
+    opik_project_name: str = Field(..., env="OPIK_PROJECT_NAME")
+
     rag_config: dict = {}
 
     class Config:
-        env_file = ".env"  # Load variables from .env if they exist
+        env_file = ".env"
+        extra = "allow"
+
 
 settings = Settings()

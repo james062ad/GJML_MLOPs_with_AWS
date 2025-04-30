@@ -5,7 +5,7 @@ set -e
 
 # CONFIGURABLE VARIABLES
 # Path to the .env file (adjust this if needed)
-ENV_FILE_PATH="rag-app-aws/.env" # <-- CHANGE this path if needed
+ENV_FILE_PATH="rag-app/.env" # <-- CHANGE this path if needed
 
 # Check if gh CLI is installed
 if ! command -v gh &> /dev/null; then
@@ -102,6 +102,7 @@ SECRETS_LIST=(
     # OpenAI
     "OPENAI_API_KEY"
     "OPENAI_MODEL"
+    "OPENAI_EMBEDDING_MODEL"
 
     # AWS Bedrock
     "AWS_ACCESS_KEY_ID"
