@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field, SecretStr
+from typing import Optional  # ✅ needed for session_token
 
 
 class Settings(BaseSettings):
@@ -20,11 +21,8 @@ class Settings(BaseSettings):
     data_path: str = Field(..., env="DATA_PATH")
 
     # ─── Model Configuration ───────────────────────────────────
-    # for generation
     llm_provider: str = Field(..., env="LLM_PROVIDER")
-    # for retrieval/ingestion
     embedding_provider: str = Field(..., env="EMBEDDING_PROVIDER")
-
     temperature: float = Field(..., env="TEMPERATURE")
     top_p: float = Field(..., env="TOP_P")
     max_tokens: int = Field(..., env="MAX_TOKENS")
@@ -38,7 +36,8 @@ class Settings(BaseSettings):
     aws_region: str = Field(..., env="AWS_REGION")
     aws_access_key_id: SecretStr = Field(..., env="AWS_ACCESS_KEY_ID")
     aws_secret_access_key: SecretStr = Field(..., env="AWS_SECRET_ACCESS_KEY")
-    aws_session_token: SecretStr = Field(..., env="AWS_SESSION_TOKEN")
+    aws_session_token: Optional[SecretStr] = Field(
+        None, env="AWS_SESSION_TOKEN")  # ✅ now truly optional
     bedrock_model_id: str = Field(..., env="BEDROCK_MODEL_ID")
     bedrock_embedding_model_id: str = Field(...,
                                             env="BEDROCK_EMBEDDING_MODEL_ID")
