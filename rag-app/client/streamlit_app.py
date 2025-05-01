@@ -89,7 +89,7 @@ def display_sidebar():
             st.session_state["top_k"] = st.slider(
                 "Top K", 1, 10, 5, help="How many top matching chunks to retrieve")
             st.session_state["max_tokens"] = st.slider(
-                "Max Tokens", 50, 1000, 300, help="Maximum number of tokens in the generated answer")
+                "Max Tokens", 50, 2000, 300, help="Maximum number of tokens in the generated answer")
             st.session_state["temperature"] = st.slider(
                 "Temperature", 0.0, 1.0, 0.7, help="Controls creativity. Lower = more focused.")
             st.session_state["chunk_size"] = st.slider(

@@ -138,18 +138,27 @@ def embed_query(query: str) -> List[float]:
         )
         return response.json()["data"][0]["embedding"]
 
+
     # ─── 8. Google PaLM API (Vertex AI) ─────────────────────────────────────────
     # INPUT: { "text": <string> }
     # OUTPUT: JSON -> { "embedding": { "value": [ ... ] } }
     # NOTES: requires model and key to be valid for the PaLM embedding endpoint
     elif provider == "google":
-        url = f"https://generativelanguage.googleapis.com/v1beta2/models/{settings.google_embedding_model}:embedText?key={settings.google_api_key}"
-        response = requests.post(
-            url,
-            headers={"Content-Type": "application/json"},
-            json={"text": query}
-        )
-        return response.json()["embedding"]["value"]
+        url = f"https://generativelanguage.googleapis.com/v1/models/{settings.google_embedding_model}:embedContent?key={settings.google_api_key}"
+        headers = {"Content-Type": "application/json"}
+        body = {
+            "content": {
+                "parts": [{"text": query}]
+            }
+        }
+        response = requests.post(url, headers=headers, json=body)
+        result = response.json()
+
+        if "embedding" not in result or "values" not in result["embedding"]:
+            raise ValueError(
+                f"❌ Google embedding error: {json.dumps(result, indent=2)}")
+
+        return result["embedding"]["values"]
 
     # ─── 9. Mistral (via Together.ai or similar) ────────────────────────────────
     # INPUT: "input": <string>

@@ -3,6 +3,8 @@ import requests
 from typing import List, Dict, Union
 import opik
 from server.src.config import settings
+from server.src.utils.bedrock_client_factory import get_bedrock_client
+from openai import OpenAI
 
 # Initialize client placeholders
 openai_client = None
@@ -15,12 +17,9 @@ google_api_key = None
 
 # Initialize actual clients based on provider
 if settings.llm_provider == "openai":
-    from openai import OpenAI
     openai_client = OpenAI(api_key=settings.openai_api_key)
 elif settings.llm_provider == "bedrock":
-    import boto3
-    bedrock_client = boto3.client(
-        "bedrock-runtime", region_name=settings.aws_region)
+    bedrock_client = get_bedrock_client()
 elif settings.llm_provider == "azure":
     azure_endpoint = settings.azure_endpoint
 elif settings.llm_provider == "huggingface":
@@ -57,21 +56,30 @@ def call_llm(prompt: str, temperature: float = None, max_tokens: int = None) -> 
             }
 
         elif settings.llm_provider == "bedrock":
+            client = get_bedrock_client()
+
             body = json.dumps({
-                "prompt": prompt,
-                "max_tokens_to_sample": max_t,
-                "temperature": temp,
-                "top_p": settings.top_p
+                "inputText": prompt,  # ✅ Titan expects "inputText"
+                "textGenerationConfig": {  # ✅ Nest under textGenerationConfig
+                    "maxTokenCount": max_t,     # ✅ Correct key name for Titan
+                    "temperature": temp,
+                    "topP": settings.top_p,
+                    "stopSequences": []         # ✅ Optional, included for safety
+                }
             })
-            response = bedrock_client.invoke_model(
+
+            response = client.invoke_model(
                 modelId=settings.bedrock_model_id,
                 body=body,
                 contentType="application/json",
                 accept="application/json"
             )
-            result = json.loads(response["body"].read())
-            return {"response": result.get("completion", ""), "response_tokens_per_second": None}
 
+            result = json.loads(response["body"].read())
+            return {
+                "response": result.get("results", [{}])[0].get("outputText", ""),
+                "response_tokens_per_second": None
+            }
         elif settings.llm_provider == "ollama":
             response = requests.post(
                 f"{settings.ollama_url}/api/generate",
