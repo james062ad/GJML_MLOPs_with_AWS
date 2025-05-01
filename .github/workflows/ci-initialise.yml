@@ -35,19 +35,24 @@ env:
   DATA_PATH: ./data
   
   # Model generation parameters
+  LLM_PROVIDER: "openai"  # Default for testing
   TEMPERATURE: "0.7"
   TOP_P: "0.9"
   MAX_TOKENS: "1000"
   
+  # Embedding provider
+  EMBEDDING_PROVIDER: "sentence-transformer"  # Default for testing
+  
   # Opik API settings (for AI model evaluation)
   OPIK_API_KEY: ${{ secrets.OPIK_API_KEY }}
   OPIK_WORKSPACE: ${{ secrets.OPIK_WORKSPACE }}
-  OPIK_ENVIRONMENT: test
-  OPIK_PROJECT_NAME: rag-app-test
+  OPIK_ENVIRONMENT: ${{ secrets.OPIK_ENVIRONMENT }}
+  OPIK_PROJECT_NAME: ${{ secrets.OPIK_PROJECT_NAME }}
   
   # OpenAI settings
-  OPENAI_MODEL: gpt-3.5-turbo
+  OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OPENAI_EMBEDDING_MODEL: ${{ secrets.OPENAI_EMBEDDING_MODEL }}
   
   # AWS settings
   AWS_REGION: us-east-1
@@ -56,6 +61,10 @@ env:
   AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
   BEDROCK_MODEL_ID: ${{ secrets.BEDROCK_MODEL_ID }}
   BEDROCK_EMBEDDING_MODEL_ID: ${{ secrets.BEDROCK_EMBEDDING_MODEL_ID }}
+
+  OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
+  OLLAMA_MODEL: ${{ secrets.OLLAMA_MODEL }}
+  OLLAMA_EMBEDDING_MODEL: ${{ secrets.OLLAMA_EMBEDDING_MODEL }}
 
   # Poetry version to use
   POETRY_VERSION: "1.8.2"

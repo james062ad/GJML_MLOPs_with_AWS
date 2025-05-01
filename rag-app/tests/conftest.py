@@ -3,6 +3,73 @@ from server.src.services.generation_service import generate_response, call_llm
 from unittest.mock import patch, MagicMock
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from pydantic_settings import BaseSettings
+from pydantic import Field, SecretStr, AnyHttpUrl
+from typing import Optional, Dict, Any
+
+
+@pytest.fixture(autouse=True)
+def mock_settings(monkeypatch):
+    """Mock the settings with test values."""
+    from server.src.config import Settings
+    
+    class TestSettings(Settings):
+        class Config:
+            validate_assignment = True
+            arbitrary_types_allowed = True
+            
+        # Override the parent class to provide default values for testing
+        environment: str = "test"
+        app_name: str = "rag-app"
+        debug: bool = True
+        
+        # Database settings
+        postgres_host: str = "localhost"
+        postgres_db: str = "test_db"
+        postgres_user: str = "test_user"
+        postgres_password: str = "test_password"
+        postgres_port: int = 5432
+        
+        # API settings
+        arxiv_api_url: AnyHttpUrl = "https://export.arxiv.org/api/query"
+        data_path: str = "./data"
+        
+        # Model settings
+        llm_provider: str = "openai"
+        embedding_provider: str = "sentence-transformer"
+        temperature: float = 0.7
+        top_p: float = 0.9
+        max_tokens: int = 1000
+        
+        # OpenAI settings
+        openai_api_key: str = "test-key"
+        openai_model: str = "gpt-3.5-turbo"
+        openai_embedding_model: str = "text-embedding-ada-002"
+        
+        # AWS settings
+        aws_region: str = "us-east-1"
+        aws_access_key_id: SecretStr = SecretStr("test-key")
+        aws_secret_access_key: SecretStr = SecretStr("test-secret")
+        aws_session_token: Optional[SecretStr] = None
+        bedrock_model_id: str = "test-model"
+        bedrock_embedding_model_id: str = "test-embedding-model"
+        
+        # Ollama settings
+        ollama_url: AnyHttpUrl = "http://localhost:11434"
+        ollama_model: str = "llama2"
+        ollama_embedding_model: str = "llama2"
+        
+        # Opik settings
+        opik_api_key: str = "test-key"
+        opik_workspace: str = "test-workspace"
+        opik_project_name: str = "rag-app-test"
+
+        # RAG config
+        rag_config: Dict[str, Any] = {}
+
+    test_settings = TestSettings()
+    monkeypatch.setattr("server.src.config.settings", test_settings)
+    return test_settings
 
 
 @pytest.fixture(autouse=True)
@@ -62,17 +129,12 @@ def db_config():
 @pytest.fixture(autouse=True)
 def setup_test_database(db_config):
     """Fixture to set up the test database with required tables."""
-    # Connect to the database
     conn = psycopg2.connect(**db_config)
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     
     try:
         cursor = conn.cursor()
-        
-        # Create the pgvector extension if it doesn't exist
         cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-        
-        # Create the papers table if it doesn't exist
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS papers (
             id SERIAL PRIMARY KEY,
@@ -82,7 +144,6 @@ def setup_test_database(db_config):
         );
         """)
         
-        # Insert some test data
         cursor.execute("""
         INSERT INTO papers (title, chunk, embedding)
         VALUES 
