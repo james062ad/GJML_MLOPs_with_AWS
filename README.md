@@ -2,7 +2,7 @@
 
 ## Project Description
 
-This repository serves as a learning platform for MLOps principles through the practical exercise of refactoring an existing Retrieval-Augmented Generation (RAG) implementation. The project focuses on transforming a basic RAG pipeline into a production-ready, cloud-enabled solution that supports multiple Large Language Model (LLM) providers.
+This repository serves as a learning platform for MLOps principles through the practical exercise of refactoring an existing Retrieval-Augmented Generation (RAG) implementation here:https://github.com/AndyMc629/oxford-genai-llmops-project. The project focuses on transforming a basic RAG pipeline into a production-ready, cloud-enabled solution that supports multiple Large Language Model (LLM) providers.
 
 Key aspects of this learning journey include:
 - Setting up and configuring AWS services for MLOps
@@ -14,6 +14,18 @@ Key aspects of this learning journey include:
   - Placeholders for future integrations (Huggingface, Ollama, Mistral, etc.)
 
 The implementation demonstrates how to build a robust, production-grade RAG system while learning essential MLOps practices and cloud infrastructure management.
+
+### Automated AWS Setup
+
+To streamline the deployment process, this project includes automated setup scripts (`setup-aws-bedrock.sh`) that handle the majority of AWS configuration tasks. These scripts automate everything from IAM role creation to Bedrock model enablement, requiring only minimal initial setup in the AWS console. Detailed instructions and script documentation can be found in `AWS_README.md`, making the AWS integration process as frictionless as possible.
+
+### Supplementary Documentation
+
+The repository includes two important supplementary documents:
+
+1. **Repo Changes Zscaler**: Documents the necessary modifications and configurations required to make the application work in environments protected by Zscaler security proxy. This is crucial for enterprise deployments where security proxies are common.
+
+2. **Repo Multi model Diff report**: Provides a detailed technical explanation of how the codebase was refactored to support multiple LLM providers. This document is valuable for understanding the architectural decisions and implementation patterns used to achieve model provider flexibility.
 
 This guide explains how our Retrieval-Augmented Generation (RAG) pipeline works. It's written for beginners and assumes basic knowledge of Python and APIs.
 
