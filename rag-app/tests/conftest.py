@@ -1,5 +1,4 @@
 import pytest
-from server.src.services.generation_service import generate_response, call_llm
 from unittest.mock import patch, MagicMock
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -7,6 +6,16 @@ from pydantic_settings import BaseSettings
 from pydantic import Field, SecretStr, AnyHttpUrl
 from typing import Optional, Dict, Any
 
+# Mock the Bedrock client factory
+@pytest.fixture(autouse=True)
+def mock_bedrock_client():
+    """Mock the Bedrock client factory to avoid AWS calls during testing."""
+    mock_client = MagicMock()
+    with patch("server.src.utils.bedrock_client_factory.get_bedrock_client", return_value=mock_client):
+        yield mock_client
+
+# Import after mock is defined to avoid circular imports
+from server.src.services.generation_service import generate_response, call_llm
 
 @pytest.fixture(autouse=True)
 def mock_settings(monkeypatch):
