@@ -6,15 +6,30 @@ from pydantic_settings import BaseSettings
 from pydantic import Field, SecretStr, AnyHttpUrl
 from typing import Optional, Dict, Any
 
-# Mock the Bedrock client factory
+# Mock AWS credentials
+mock_credentials = {
+    "access_key": "test-access-key",
+    "secret_key": "test-secret-key",
+    "session_token": "test-session-token"
+}
+
+@pytest.fixture(autouse=True)
+def mock_aws_credentials():
+    """Mock AWS credentials to avoid actual AWS calls during testing."""
+    with patch("server.src.services.aws_refresh_service.CredentialStore.get_credentials", return_value=mock_credentials):
+        yield
+
 @pytest.fixture(autouse=True)
 def mock_bedrock_client():
     """Mock the Bedrock client factory to avoid AWS calls during testing."""
     mock_client = MagicMock()
-    with patch("server.src.utils.bedrock_client_factory.get_bedrock_client", return_value=mock_client):
+    mock_client.invoke_model.return_value = {
+        "body": MagicMock(read=lambda: '{"results": [{"outputText": "test response"}]}')
+    }
+    with patch("boto3.client", return_value=mock_client):
         yield mock_client
 
-# Import after mock is defined to avoid circular imports
+# Import after mocks are defined
 from server.src.services.generation_service import generate_response, call_llm
 
 @pytest.fixture(autouse=True)
