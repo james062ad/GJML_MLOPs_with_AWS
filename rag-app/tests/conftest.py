@@ -1,5 +1,20 @@
 import pytest
 from unittest.mock import patch, MagicMock
+import sys
+import os
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Create the mock model
+mock_model = MagicMock()
+mock_model.encode.return_value = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+# Start the patch before any imports
+patcher = patch("sentence_transformers.SentenceTransformer", return_value=mock_model)
+patcher.start()
+
+# Now import other dependencies
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pydantic_settings import BaseSettings
@@ -12,6 +27,15 @@ mock_credentials = {
     "secret_key": "test-secret-key",
     "session_token": "test-session-token"
 }
+
+@pytest.fixture(autouse=True)
+def mock_sentence_transformer():
+    """Mock the SentenceTransformer module to avoid loading the real model during tests."""
+    mock_model = MagicMock()
+    mock_model.encode.return_value = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+    with patch("server.src.services.retrieval_service.get_embedding_model", return_value=mock_model):
+        yield mock_model
 
 @pytest.fixture(autouse=True)
 def mock_aws_credentials():
@@ -95,16 +119,6 @@ def mock_settings(monkeypatch):
 # Import after all mocks are defined
 from server.src.services.generation_service import generate_response, call_llm
 
-@pytest.fixture(autouse=True)
-def mock_sentence_transformer():
-    """Mock the SentenceTransformer module to avoid loading the real model during tests."""
-    mock_model = MagicMock()
-    mock_model.encode.return_value = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    
-    with patch("server.src.services.retrieval_service.SentenceTransformer", return_value=mock_model):
-        yield
-
-
 @pytest.fixture
 def mock_query():
     """Fixture to provide a sample query for testing."""
@@ -183,3 +197,7 @@ def setup_test_database(db_config):
     finally:
         cursor.close()
         conn.close()
+
+# Clean up the patch when tests are done
+def pytest_sessionfinish(session, exitstatus):
+    patcher.stop()

@@ -176,6 +176,5 @@ aws/
 
 # Project specific
 # rag-app/  # Removed to allow tracking of the utils directory
-
-rag-app-simple/
+#rag-app-simple/
 
