@@ -29,9 +29,6 @@ def mock_bedrock_client():
     with patch("boto3.client", return_value=mock_client):
         yield mock_client
 
-# Import after mocks are defined
-from server.src.services.generation_service import generate_response, call_llm
-
 @pytest.fixture(autouse=True)
 def mock_settings(monkeypatch):
     """Mock the settings with test values."""
@@ -95,6 +92,8 @@ def mock_settings(monkeypatch):
     monkeypatch.setattr("server.src.config.settings", test_settings)
     return test_settings
 
+# Import after all mocks are defined
+from server.src.services.generation_service import generate_response, call_llm
 
 @pytest.fixture(autouse=True)
 def mock_sentence_transformer():

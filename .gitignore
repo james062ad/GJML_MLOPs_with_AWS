@@ -175,7 +175,7 @@ aws/
 #.idea/
 
 # Project specific
-rag-app/
-rag-app-aws/
+# rag-app/  # Removed to allow tracking of the utils directory
+
 rag-app-simple/
-rag-app-aws-old/
+
