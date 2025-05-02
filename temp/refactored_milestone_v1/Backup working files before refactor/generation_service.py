@@ -1,9 +1,10 @@
-
 import json
 import requests
 from typing import List, Dict, Union
 import opik
 from server.src.config import settings
+from server.src.utils.bedrock_client_factory import get_bedrock_client
+from openai import OpenAI
 
 # Initialize client placeholders
 openai_client = None
@@ -16,11 +17,9 @@ google_api_key = None
 
 # Initialize actual clients based on provider
 if settings.llm_provider == "openai":
-    from openai import OpenAI
     openai_client = OpenAI(api_key=settings.openai_api_key)
 elif settings.llm_provider == "bedrock":
-    import boto3
-    bedrock_client = boto3.client("bedrock-runtime", region_name=settings.aws_region)
+    bedrock_client = get_bedrock_client()
 elif settings.llm_provider == "azure":
     azure_endpoint = settings.azure_endpoint
 elif settings.llm_provider == "huggingface":
@@ -31,6 +30,7 @@ elif settings.llm_provider == "anthropic":
     anthropic_api_key = settings.anthropic_api_key
 elif settings.llm_provider == "google":
     google_api_key = settings.google_api_key
+
 
 @opik.track
 def call_llm(prompt: str, temperature: float = None, max_tokens: int = None) -> Union[Dict[str, Union[str, float, None]], None]:
@@ -49,27 +49,37 @@ def call_llm(prompt: str, temperature: float = None, max_tokens: int = None) -> 
             return {
                 "response": response.choices[0].message.content,
                 "response_tokens_per_second": (
-                    (response.usage.total_tokens / response.usage.completion_tokens)
+                    (response.usage.total_tokens /
+                     response.usage.completion_tokens)
                     if hasattr(response, "usage") else None
                 )
             }
 
         elif settings.llm_provider == "bedrock":
+            client = get_bedrock_client()
+
             body = json.dumps({
-                "prompt": prompt,
-                "max_tokens_to_sample": max_t,
-                "temperature": temp,
-                "top_p": settings.top_p
+                "inputText": prompt,  # ✅ Titan expects "inputText"
+                "textGenerationConfig": {  # ✅ Nest under textGenerationConfig
+                    "maxTokenCount": max_t,     # ✅ Correct key name for Titan
+                    "temperature": temp,
+                    "topP": settings.top_p,
+                    "stopSequences": []         # ✅ Optional, included for safety
+                }
             })
-            response = bedrock_client.invoke_model(
+
+            response = client.invoke_model(
                 modelId=settings.bedrock_model_id,
                 body=body,
                 contentType="application/json",
                 accept="application/json"
             )
-            result = json.loads(response["body"].read())
-            return {"response": result.get("completion", ""), "response_tokens_per_second": None}
 
+            result = json.loads(response["body"].read())
+            return {
+                "response": result.get("results", [{}])[0].get("outputText", ""),
+                "response_tokens_per_second": None
+            }
         elif settings.llm_provider == "ollama":
             response = requests.post(
                 f"{settings.ollama_url}/api/generate",
@@ -79,7 +89,8 @@ def call_llm(prompt: str, temperature: float = None, max_tokens: int = None) -> 
             return {"response": result.get("response", ""), "response_tokens_per_second": None}
 
         elif settings.llm_provider == "huggingface":
-            headers = {"Authorization": f"Bearer {settings.huggingface_api_key}"}
+            headers = {
+                "Authorization": f"Bearer {settings.huggingface_api_key}"}
             response = requests.post(
                 huggingface_url,
                 headers=headers,
@@ -141,20 +152,36 @@ def call_llm(prompt: str, temperature: float = None, max_tokens: int = None) -> 
             return {"response": result["choices"][0]["text"], "response_tokens_per_second": None}
 
         elif settings.llm_provider == "google":
-            response = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta2/models/{settings.google_model}:generateText?key={google_api_key}",
-                headers={"Content-Type": "application/json"},
-                json={"prompt": {"text": prompt}, "temperature": temp}
-            )
+            url = f"https://generativelanguage.googleapis.com/v1/models/{settings.google_model}:generateContent?key={settings.google_api_key}"
+            headers = {"Content-Type": "application/json"}
+            body = {
+                "contents": [
+                    {
+                        "parts": [{"text": prompt}]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": temp,
+                    "topP": settings.top_p,
+                    "maxOutputTokens": max_t
+                }
+            }
+
+            response = requests.post(url, headers=headers, json=body)
             result = response.json()
-            return {"response": result["candidates"][0]["output"], "response_tokens_per_second": None}
+            return {
+                "response": result["candidates"][0]["content"]["parts"][0]["text"],
+                "response_tokens_per_second": None
+            }
 
         else:
-            raise ValueError(f"Unsupported LLM_PROVIDER: {settings.llm_provider}")
+            raise ValueError(
+                f"Unsupported LLM_PROVIDER: {settings.llm_provider}")
 
     except Exception as e:
         print(f"[call_llm] Error: {e}")
         return {"response": f"⚠️ Error: {e}", "response_tokens_per_second": None}
+
 
 @opik.track
 def generate_response(
@@ -174,17 +201,19 @@ def generate_response(
         "response_tokens_per_second": result.get("response_tokens_per_second")
     }
 
+
 def format_context_from_chunks(chunks: List[Dict]) -> str:
     if not chunks:
         return "No relevant context available."
+
     formatted_chunks = []
     for i, chunk in enumerate(chunks, 1):
         title = chunk.get("title", "Untitled")
         content = chunk.get("chunk", "")
         formatted_chunks.append(f"Document {i} - {title}:\n{content}\n")
-{content}
-")
+
     return "\n".join(formatted_chunks)
+
 
 def create_prompt_with_context(query: str, context: str) -> str:
     return (

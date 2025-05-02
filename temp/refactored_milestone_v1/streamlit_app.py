@@ -82,8 +82,6 @@ def query_fastapi(query, top_k=5, max_tokens=200, temperature=0.7):
         "top_k": top_k,
         "max_tokens": max_tokens,
         "temperature": temperature,
-        "llm_provider": st.session_state.get("llm_provider"),
-        "embedding_provider": st.session_state.get("embedding_provider")
     }
     try:
         response = requests.get(url, params=params)
@@ -102,106 +100,43 @@ def display_header():
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-
 def display_sidebar():
-    """Display sidebar with collapsed settings and unified model selection."""
+    """Display sidebar with controls and information."""
     with st.sidebar:
         st.header("⚙️ Settings")
 
-# 🧠 Unified model provider selection
-mod
-                model_mode = st.selectbox(
-            "Model Configuration",
-            options=[
-                "OpenAI + SentenceTransformer",
-                "OpenAI (Embedding + LLM)",
-                "Bedrock",
-                "Cohere",
-                "Ollama"
-            ],
-            index=0
-        )
+        # Model parameters
+        st.subheader("Model Parameters")
+        top_k = st.slider("Top K", min_value=1, max_value=10, value=5,
+                          help="Number of top results to consider")
+        st.session_state["top_k"] = top_k
 
-        # Store inferred provider settings based on selected mode
-        if model_mode == "OpenAI + SentenceTransformer":
-            st.session_state["llm_provider"] = "openai"
-            st.session_state["embedding_provider"] = "sentence-transformer"
-        elif model_mode == "OpenAI (Embedding + LLM)":
-            st.session_state["llm_provider"] = "openai"
-            st.session_state["embedding_provider"] = "openai"
-        elif model_mode == "Bedrock":
-            st.session_state["llm_provider"] = "bedrock"
-            st.session_state["embedding_provider"] = "bedrock"
-        elif model_mode == "Cohere":
-            st.session_state["llm_provider"] = "cohere"
-            st.session_state["embedding_provider"] = "cohere"
-        elif model_mode == "Ollama":
-            st.session_state["llm_provider"] = "ollama"
-            st.session_state["embedding_provider"] = "sentence-transformer"
+        max_tokens = st.slider("Max Tokens", min_value=50, max_value=500, value=200,
+                               help="Maximum number of tokens in the response")
+        st.session_state["max_tokens"] = max_tokens
 
-        st.markdown(
-            f"🔁 **LLM**: `{st.session_state['llm_provider']}` | **Embedding**: `{st.session_state['embedding_provider']}`")
-
-        # Advanced settings inside an expander
-        with st.expander("🔧 Advanced Parameters", expanded=False):
-            top_k = st.slider("Top K", min_value=1, max_value=10, value=5,
-                              help="Number of top results to consider")
-            st.session_state["top_k"] = top_k
-
-            max_tokens = st.slider("Max Tokens", min_value=50, max_value=500, value=200,
-                                   help="Maximum number of tokens in the response")
-            st.session_state["max_tokens"] = max_tokens
-
-            temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7,
-                                    help="Higher values = more random output")
-            st.session_state["temperature"] = temperature
+        temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7,
+                                help="Higher values make the output more random, lower values more deterministic")
+        st.session_state["temperature"] = temperature
 
         # Clear chat button
         if st.button("🗑️ Clear Chat History"):
             st.session_state["messages"] = []
             st.rerun()
 
-        
-
-# PATCH: Rebuild section updated to print raw response, fallback to 'detail' if 'message' missing
-
-        # Rebuild vector DB from UI
-        st.subheader("🛠️ Vector Database Control")
-        st.caption(
-            "Rebuilds the pgvector table and reruns ingestion based on the current embedding model.")
-        if st.button("Rebuild Vector DB"):
-            with st.spinner("🔄 Rebuilding vector DB..."):
-                try:
-                    response = requests.post(
-                        "http://localhost:8000/rebuild",
-                        params={
-                            "json_dir": "./papers-downloads",
-                            "output_file": "init/processed_papers.json",
-                            "chunk_size": st.session_state["chunk_size"],
-                            "overlap": st.session_state["overlap"],
-                        }
-                    )
-                    result = response.json()
-
-                    # Log full result
-                    st.code(result, language="json")
-
-                    # Show success only if message exists
-                    message = result.get("message") or result.get("detail", "No message returned")
-                    if "status" in result and result["status"] == "success":
-                        st.success(f"✅ {message}")
-                        st.session_state["db_is_fresh"] = True
-                    else:
-                        st.error(f"❌ Rebuild incomplete or returned no message.")
-                        st.code(result, language="json")
-                except Exception as e:
-                    st.error(f"❌ Rebuild failed with unexpected error.")
-                    st.code(str(e))
+        # App information
         st.markdown("---")
         st.subheader("ℹ️ About")
-        st.markdown("This app uses a FastAPI backend to generate responses to your questions.")
+        st.markdown("""
+        This app uses a FastAPI backend to generate responses to your questions.
+        The backend processes your query and returns relevant information.
+        """)
+
+        # Footer
         st.markdown("---")
         st.markdown("Made with ❤️ using Streamlit")
+
+
 def display_chat_message(message, role):
     """Display a chat message with timestamp."""
     with st.chat_message(role):
@@ -238,7 +173,6 @@ def main():
         display_chat_message(msg, msg["role"])
 
     # User input field
-i
     query = st.chat_input("Ask something...")
     if query:
         # Get parameters from sidebar

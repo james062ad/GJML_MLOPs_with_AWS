@@ -1,27 +1,10 @@
 import pytest
 from server.src.services.retrieval_service import retrieve_top_k_chunks
-from dotenv import load_dotenv
-import os
 from unittest.mock import patch, MagicMock
 import numpy as np
 
-# TODO: update to use BaseSettings implementation
-load_dotenv()
-
-DATA_PATH = os.getenv("DATA_PATH")
-
-# Database connection configuration
-db_config = {
-    "dbname": os.environ.get("POSTGRES_DB"),
-    "user": os.environ.get("POSTGRES_USER"),
-    "password": os.environ.get("POSTGRES_PASSWORD"),
-    "host": os.environ.get("POSTGRES_HOST"),
-    "port": os.environ.get("POSTGRES_PORT"),
-}
-
-# Test function for the retrieval service - your postgres instance needs to be running.
-@pytest.mark.asyncio
-async def test_retrieve_top_k_chunks(db_config):
+def test_retrieve_top_k_chunks(db_config):
+    """Test the retrieval service with mock embeddings."""
     # Mock query and top_k value
     query = "perovskite"
     top_k = 5

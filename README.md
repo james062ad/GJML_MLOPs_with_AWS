@@ -1,393 +1,362 @@
-# _Artificial Intelligence: Generative AI, Cloud and MLOps (online), University of Oxford_: LLMOps Project
-## Introduction and Background
-Oxford GenAI Course project. The aim of this project is to help students understand some of the key concerns and process flows required for AI engineering.
+# RAG Implementation Guide
 
-### What is AI engineering?
-For the purposes of this course we use the term ‘AI engineering’ to refer to:
-The discipline of building end-to-end applications that leverage Artificial Intelligence.
-Note that this definition will also include within it the related concept of ‘Machine Learning Engineering’ (ML Engineering), which we consider a subset. These concepts will be explained in more detail in the rest of this document.
+## Project Description
 
-### What do AI engineers do?
-Given the above description, AI engineering is necessarily concerned with AI systems in a relatively holistic sense and so it may prove difficult to succinctly define all activities that fall within its scope. The development of this field over the past 2-3 years, in particular, has however suggested a convergence on a certain set of activities that are core to the discipline:
+This repository serves as a learning platform for MLOps principles through the practical exercise of refactoring an existing Retrieval-Augmented Generation (RAG) implementation. The project focuses on transforming a basic RAG pipeline into a production-ready, cloud-enabled solution that supports multiple Large Language Model (LLM) providers.
 
-* Software Engineering Best Practice
-* Infrastructure & Cloud engineering.
-* Data processing.
-* Prompt Engineering.
-* Orchestration.
-* Model and System Performance Validation.
-* Model and System Performance Monitoring.
-* API Integration Engineering.
-* System Design and Deployment Patterns.
+Key aspects of this learning journey include:
+- Setting up and configuring AWS services for MLOps
+- Integrating AWS Bedrock for LLM capabilities
+- Implementing a flexible architecture that supports multiple LLM providers including:
+  - OpenAI (full implementation)
+  - AWS Bedrock
+  - Google AI
+  - Placeholders for future integrations (Huggingface, Ollama, Mistral, etc.)
 
-Those who are aware of the disciplines of ML Engineering & Machine Learning Operations (MLOps) will see a lot of overlap in terms of these topics (with the exception of 3). This course module will help you build skills and knowledge in the area of AI engineering by building on a foundation of core MLOps practice and then extending these skills for the era of Foundation Models and Generative AI.
+The implementation demonstrates how to build a robust, production-grade RAG system while learning essential MLOps practices and cloud infrastructure management.
 
-### Background Reading
-As part of this course you have all been provided with an e-copy of [Machine Learning Engineering with Python, 2nd Edition](https://www.packtpub.com/product/machine-learning-engineering-with-python-2nd-edition/9781801078031) by [Andy McMahon](https://www.linkedin.com/in/andrew-p-mcmahon/). We will use this book to develop our core skills in AI engineering before augmenting it with new material.
+This guide explains how our Retrieval-Augmented Generation (RAG) pipeline works. It's written for beginners and assumes basic knowledge of Python and APIs.
 
-The book is fundamentally a book about machine learning engineering, which can be thought of as a precursor to AI engineering. Many of the core foundational concepts from ML engineering carry over into AI engineering.
+## Table of Contents
+1. [Overview](#overview)
+2. [Project Structure](#project-structure)
+3. [Components](#components)
+4. [How It Works](#how-it-works)
+5. [Setup and Installation](#setup-and-installation)
+6. [Usage](#usage)
+7. [Configuration](#configuration)
+8. [Troubleshooting](#troubleshooting)
 
-To augment your learning from the lectures in the course, the following topics are covered in the identified chapters in the book. I would suggest reading these and following some of the coding exercises within the book to prepare you for the  project (discussed in a later section):
+## Overview
 
-1. Software Engineering Best Practice:
-  * The ML and AI Development Lifecycle [Chapter 2.3]
-  * Software Engineering & Python Fundamentals [Chapter 1.5, 4.1, 4.2 and 4.5]
-  * CI/CD with GitHub Actions [Chapter 2.3 and 5.6]
+This document provides a detailed explanation of the Retrieval-Augmented Generation (RAG) implementation in this project. The RAG system combines document retrieval with language model generation to provide accurate, context-aware responses to user queries.
 
-2. Infrastructure & Cloud engineering:
-  * AWS Services & AWS CLI [Throughout the book]
-  * Kubernetes [Chapter 6.4 and 8.7]
+## Project Structure
 
-3. Data Processing & Storage:
-  * ETL Fundamentals [Chapter 6]
-  * Apache Spark [Chapter 6.2]
-  * Ray [Chapter 6.5]
-
-4. Prompt Engineering:
-  * Basic Langchain [Chapter 7.2]
-
-5. Orchestration.
-  * Apache Airflow [Chapter 5.6, 9.4 and 9.5]
-  * Kubeflow [5.7]
-
-6. Model and System Performance Validation & Monitoring [Chapter 3, Chapter 5, Chapters 8 & 9].
-
-7. System Design and Deployment Patterns:
-  * AI Application Patterns:
-    * One-shot Q&A [Chapter 7.2]
-
-This  project will build on some of the topics covered in the material above and provide a specific AI engineering bent to it. See details on the Project for more.
-
-### AI Engineering vs ML Engineering
-
-## Project
-This project will complement the background study material with guided hands on work on the following topics:
-
-1. CI/CD - you will learn how to use GitHub Actions in order to automate the testing and deployment of your code base. You will also learn how to use Makefiles to simplify complex application builds.
-2. Docker - you will learn how to use containerisation to build microservices required for an AI use case.
-3. AWS - you will learn what cloud services available in AWS are useful for AI applications and will get to know how to programmatically access them. This will include using the flagship AWS Bedrock service for foundation model serving.
-4. LLM Traces - you will learn how to implement open source tools that allow you to monitor, track and debug interactions with LLMs in your application.
-5. Advanced RAG- you will learn how to take a naive RAG implementation that does basic retrieval and generation and augment it with techniques such as query expansion. Importantly you will do this *without* using an off-the-shelf framework and will code everything natively in Python. This will give you insights into what goes on under the hood in the most popular libaries and frameworks.
-6. Guardrails - We will explore how to apply Bedrock guardrails to protect against undesired outcomes in our AI application.
-7. Databases - You will use Postgresql, one of the most popular production ready databases in the world, along with its `pgvector` extension to store and manipulate vectorised embeddings.
-8. Ollama - We will use the Ollama solution in order to run LLMs locally for development and testing of your application, before moving to cloud hosted Foundation Models.
-
-Other concepts which will be utilised in this project that are covered in the book in detail are:
-
-9. Testing - You will see how to write advanced tests for async functions, for data intensive functions and for AI workflows.
-10. Functional Programming (and more Python fundamentals) - This project is written in a functional style and will show you how to write code that is readable and maintainable even when not using Object Orientated Programming (OOP). The code will also show you how to write modular code that is easy to test, extend and adapt to multiple use cases.
-11. Config driven development - We'll show you can leverage strong configuration principles in order to reduce duplication and make your code more maintainable.
-
-
-### Structure
-The repository has the following tree structure:
+The project is organized as follows:
 
 ```
-├── LICENSE
-├── README.md
-├── rag-app
-│   ├── Makefile
-│   ├── data
-│   ├── deploy
-│   │   ├── cloudformation
-│   │   ├── docker
-│   │   │   ├── llm-server
-│   │   │   │   └── docker-compose.yml
-│   │   │   └── postgres
-│   │   │       ├── deduplicate.sql
-│   │   │       ├── docker-compose.yaml
-│   │   │       ├── init_pgvector.sql
-│   │   │       └── pgvector.Dockerfile
-│   │   └── scripts
-│   ├── poetry.lock
-│   ├── pyproject.toml
-│   ├── server
-│   │   ├── __init__.py
-│   │   ├── config
-│   │   │   ├── dev.yaml
-│   │   │   └── prod.yaml
-│   │   └── src
-│   │       ├── __init__.py
-│   │       ├── config.py
-│   │       ├── config_loader.py
-│   │       ├── controllers
-│   │       │   ├── __init__.py
-│   │       │   ├── generation.py
-│   │       │   ├── health_check.py
-│   │       │   ├── rag_pipeline.py
-│   │       │   └── retrieval.py
-│   │       ├── database
-│   │       │   ├── __init__.py
-│   │       │   ├── db_session.py
-│   │       │   └── vector.py
-│   │       ├── ingestion
-│   │       │   ├── __init__.py
-│   │       │   ├── arxiv_client.py
-│   │       │   ├── embeddings.py
-│   │       │   ├── pipeline.py
-│   │       │   └── utils.py
-│   │       ├── main.py
-│   │       ├── models
-│   │       │   ├── __init__.py
-│   │       │   ├── document.py
-│   │       │   ├── generated_response.py
-│   │       │   ├── query.py
-│   │       │   └── user_interaction.py
-│   │       ├── services
-│   │       │   ├── __init__.py
-│   │       │   ├── generation_service.py
-│   │       │   └── retrieval_service.py
-│   │       └── settings.py
-│   └── tests
-│       └── services
-│           ├── __init__.py
-│           ├── test_generation_service.py
-│           └── test_retrieval_service.py
-└── requirements.txt
+rag-app/
+├── server/                 # FastAPI backend server
+│   ├── src/                # Source code
+│   │   ├── controllers/    # API endpoints
+│   │   ├── ingestion/      # Data ingestion pipeline
+│   │   ├── models/         # Data models
+│   │   ├── services/       # Business logic
+│   │   ├── config.py       # Configuration settings
+│   │   └── main.py         # Application entry point
+│   ├── tests/              # Test suite
+│   ├── Dockerfile          # Container definition
+│   └── requirements.txt    # Python dependencies
+├── client/                 # Streamlit frontend
+│   └── streamlit_app.py    # Streamlit application
+├── data/                   # Data storage
+├── Makefile                # Build and run commands
+└── README.md               # Project documentation
 ```
 
-This is based around the classic controller/service architecture, utilising FastAPI, PostgresQL and Ollama (for local LLM serving) and Amazon Bedrock (for remote LLM serving)
+## Container Structure
 
-Here is a diagram outlining the main logical components of the application and how data flows through the app.:
+The project uses a containerized development environment to ensure consistency across different development machines and simplify the setup process. This approach offers several key benefits:
 
-```mermaid
-flowchart LR
-    %% Define Main Components in Horizontal Layout
-    A[Client Query] --> B[Orchestrator]
+### Why Containerization is Necessary
 
-    %% Service Components in Workflow
-    B --> C[Query Expansion]
-    C --> D[Retrieval Service]
-    D --> E[Reranking Service]
-    E --> F[Generation Service]
-    F --> G[Generated Response to Client]
+1. **Environment Consistency**: Containers ensure that all developers work with the same dependencies, versions, and configurations, eliminating "it works on my machine" problems.
 
-    %% Data Storage and Tracing
-    D -->|Fetch Data| H[Knowledge Base]
-    F --> I[Tracing & Monitoring]
+2. **Isolation**: The development environment is isolated from the host system, preventing conflicts with other projects or system-wide dependencies.
 
-    %% Styling (optional)
-    classDef service fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef datastore fill:#bbf,stroke:#333,stroke-width:2px;
-    class B,C,D,E,F,G service;
-    class H,I datastore;
-```
+3. **Reproducibility**: New team members can quickly get started without manually installing numerous dependencies.
+
+4. **Security**: Sensitive credentials and configurations can be managed securely within the container environment.
+
+### Container Implementation
+
+The container structure consists of two main components:
+
+1. **Dockerfile** (`.devcontainer/Dockerfile`):
+   - Based on the official Microsoft Python dev container image
+   - Installs AWS CLI with architecture detection (supports both x86_64 and ARM)
+   - Configures SSL certificates for secure connections
+   - Sets up Python dependencies from requirements.txt
+   - Configures Git for safe directory access
+
+2. **Dev Container Configuration** (`.devcontainer/devcontainer.json`):
+   - Defines the development container settings
+   - Configures VS Code extensions (including Jupyter support)
+   - Sets up GitHub CLI integration
+   - Mounts the user's Git configuration for seamless version control
+   - Configures the Python environment with Poetry for dependency management
+
+This containerized approach allows developers to work in a consistent environment regardless of their local setup, making it easier to focus on development rather than environment configuration.
+
+## GitHub Workflows
+
+The project uses GitHub Actions workflows to automate testing, validation, and deployment processes. These workflows ensure code quality and reliability throughout the development lifecycle.
+
+### CI Initialization Workflow
+
+The `ci-initialise.yml` workflow runs automated tests whenever code is pushed to any branch:
+
+1. **Environment Setup**:
+   - Runs on Ubuntu latest
+   - Sets up a PostgreSQL database with pgvector extension for vector similarity search
+   - Configures environment variables for testing
+
+2. **Dependency Management**:
+   - Uses Poetry for Python dependency management
+   - Caches Poetry installation and dependencies for faster workflow execution
+   - Installs project dependencies in an isolated environment
+
+3. **Testing Process**:
+   - Runs the test suite using pytest
+   - Generates XML test reports
+   - Uploads test results as artifacts for later analysis
+
+This workflow ensures that code changes don't introduce regressions and maintains the quality of the codebase.
+
+### Secrets Verification Workflow
+
+The `verify-secrets.yml` workflow validates that all required secrets are properly configured:
+
+1. **Manual Trigger**: This workflow can be manually triggered to verify secrets at any time.
+
+2. **Secret Validation**: Checks for the presence of critical secrets:
+   - Database credentials (POSTGRES_USER, POSTGRES_PASSWORD)
+   - API keys (OPIK_API_KEY, OPENAI_API_KEY)
+   - Workspace configurations (OPIK_WORKSPACE, OPIK_PROJECT_NAME)
+
+3. **Verification Reporting**: Provides clear feedback on which secrets are properly configured.
+
+This workflow helps prevent deployment issues caused by missing or incorrectly configured secrets.
+
+## Main Components
+
+### 1. Data Ingestion Pipeline
+
+The ingestion pipeline (`server/src/ingestion/`) is responsible for processing documents and preparing them for retrieval:
+
+- **Text Chunking**: Breaks documents into smaller, manageable chunks for better retrieval
+- **Embedding Generation**: Creates vector embeddings using SentenceTransformer
+- **Database Storage**: Stores document chunks and embeddings in PostgreSQL with pgvector
+
+### 2. Retrieval Service
+
+The retrieval service (`server/src/services/retrieval_service.py`) finds relevant documents for a given query:
+
+- **Query Embedding**: Converts user queries into vector embeddings
+- **Similarity Search**: Uses cosine similarity to find the most relevant document chunks
+- **Database Integration**: Leverages pgvector for efficient vector similarity search
+
+### 3. Generation Service
+
+The generation service (`server/src/services/generation_service.py`) creates responses based on retrieved documents:
+
+- **Context Preparation**: Formats retrieved documents for the language model
+- **LLM Integration**: Currently uses OpenAI's API (with plans to transition to AWS Bedrock)
+- **Response Generation**: Creates coherent answers based on the retrieved context
+
+### 4. API Controllers
+
+The API controllers (`server/src/controllers/`) expose endpoints for interacting with the RAG system:
+
+- **Retrieval Endpoint**: Returns relevant document chunks for a query
+- **Generation Endpoint**: Generates responses based on retrieved documents
+- **Health Check**: Monitors system status
+
+## How It Works
+
+### Step 1: Document Processing
+
+1. Documents are read from JSON files
+2. Text is chunked into smaller segments
+3. Embeddings are generated for each chunk using SentenceTransformer
+4. Chunks and embeddings are stored in PostgreSQL with pgvector
+
+### Step 2: Query Processing
+
+1. User submits a query through the API
+2. The query is converted to an embedding using the same SentenceTransformer model
+3. The system retrieves the top K most similar document chunks using cosine similarity
+
+### Step 3: Response Generation
+
+1. Retrieved document chunks are formatted as context
+2. The context and query are sent to the language model (currently OpenAI)
+3. The model generates a response based on the provided context
+4. The response is returned to the user
+
+## Setup and Installation
+
+### Prerequisites
+
+- Python 3.11+
+- Docker and Docker Compose
+- PostgreSQL with pgvector extension
+- OpenAI API key (for generation)
+
+### Environment Setup
+
+1. Clone the repository
+2. Create a `.env` file with the following variables:
+   ```
+   POSTGRES_HOST=localhost
+   POSTGRES_DB=rag_db
+   POSTGRES_USER=your_username
+   POSTGRES_PASSWORD=your_password
+   POSTGRES_PORT=5432
+   OPENAI_API_KEY=your_openai_api_key
+   ```
+
+3. Start the development container:
+   ```bash
+   # From the project root
+   code .
+   # VS Code will prompt to reopen in container - accept this
+   ```
+
+4. Install dependencies:
+   ```bash
+   # Inside the container
+   cd rag-app
+   make install
+   ```
+
+5. Build the database:
+   ```bash
+   # Inside the container
+   make build-db
+   ```
+
+6. Run the ingestion pipeline:
+   ```bash
+   # Inside the container
+   make run-ingestion
+   ```
+
+7. Start the application:
+   ```bash
+   # Inside the container
+   make run-app
+   ```
+
+8. In a new terminal, start the client:
+   ```bash
+   # Inside the container
+   make run-client
+   ```
+
 ## Usage
-The Makefile has been designed so that building and running the application and its components is as simple as possible.
 
-To build the database:
+### API Endpoints
 
-```
-make build-db
-```
+1. **Retrieve Documents**:
+   ```
+   GET /api/retrieve?query=your_query&top_k=5
+   ```
+   Returns the top K most relevant document chunks for the given query.
 
-To download the data locally:
+2. **Generate Response**:
+   ```
+   POST /api/generate
+   {
+     "query": "your_query",
+     "top_k": 5,
+     "max_tokens": 1000,
+     "temperature": 0.7
+   }
+   ```
+   Generates a response based on the retrieved documents.
 
-```
-make download-data
-```
+### Streamlit Interface
 
-To run the ingestion pipeline:
+The Streamlit interface provides a user-friendly way to interact with the RAG system:
+1. Enter your query in the text input
+2. View the generated response
+3. See the retrieved document chunks that informed the response
 
-```
-make run-ingestion
-```
+## Configuration
 
-To run the FastAPI app:
+The system can be configured through environment variables and YAML files:
 
-```
-make run-app
-```
+### Environment Variables
 
-To run the tests
+The application uses environment variables for most configuration settings, which are loaded through the `Settings` class in `config.py`. These include:
 
-```
-make test
-```
+- **Database connection settings**: `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
+- **API endpoints and paths**: `ARXIV_API_URL`, `DATA_PATH`
+- **Model parameters**: `TEMPERATURE`, `TOP_P`, `MAX_TOKENS`
+- **API keys**: `OPENAI_API_KEY`, `OPIK_API_KEY`
+- **Workspace configurations**: `OPIK_WORKSPACE`, `OPIK_PROJECT_NAME`
 
-To build the ollama service:
+These variables can be set in a `.env` file or directly in the environment.
 
-```
-make build-ollama
-```
+### YAML Configuration
 
-To run the ollama service:
+The project includes a YAML configuration file at `rag-app/server/config/rag.yaml` that contains specific settings for the RAG pipeline:
 
-```
-make run-ollama
-```
+```yaml
+retrieval:
+  top_k: 5  # Number of documents to retrieve
+  re_rank: false  # Re-rank documents after retrieval
 
-Then to destroy the components, stop the app and then:
+query_expansion:
+  enabled: true
+  method: "llm"  # Options: "llm", "synonym", "embedding"
+  max_expansion_terms: 3
 
-```
-make remove-ollama
-make remove-db
-```
+summarization:
+  enabled: false
+  method: "density"  # Options: "density", "standard"
+  max_iterations: 2
 
-### AWS
-1. First, sign up to get an AWS account if you don't already have one.
-2. Next, I suggest configuring a budget alert (for $1 a day is fine).
-3. Configure an IAM role in the AWS management console https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-role.html:
- 1. Select 'AWS Account' for the trusted entity.
- 2. Select your own account.
- 3. For permissions policies, add permission for full access to Bedrock, ElasticContainerRegistry, ECS, EC2, CloudWatch (v2), CloudFormation, AmazonS3, AWSLambdaBasicExecutionRole.
- 4. I've called this role Bedrock-Dev-FullAccess-Role
-
- ![alt text](assets/image-bedrock-role1.png)
-
- 5. Create a user in the IAM centre, call it 'cli-access-user'
-
-
-https://community.aws/content/2b6vVO87SMvy1cY70GeinjH5ZX3/multimodal?lang=en
-https://github.com/suryakva/genai-titan-image-generator
-
-#### Bedrock
-
-**Objective**: Set up access to AWS Bedrock, enabling you to call its APIs through the AWS CLI.
-
-**Step 1: Understand the Components**
-
-1. IAM (Identity and Access Management): This is how AWS controls “who can do what.”
-  * Users: Represent people (you or your students).
-  * Roles: Represent permissions you temporarily “assume” to access AWS services.
-  * Policies: Define “what actions” are allowed for users or roles.
-2. Why Roles for Bedrock?
-  * Roles are a secure way to give temporary access to AWS services (like Bedrock) without needing static credentials hardcoded anywhere.
-
-**Step 2: Set Up AWS CLI Credentials Locally**
-
-Before using AWS CLI, you need to authenticate with your AWS account:
-
-1. Log in to the AWS Console:
-  * Go to AWS Management Console.
-  * Log in as the root user (or an IAM user with admin privileges).
-2. Create an IAM User for Yourself (Best Practice):
-  * Navigate to IAM > Users > Add Users.
-  * Enter a username, e.g., AdminUser.
-	* Check Programmatic Access (for CLI use).
-	* Attach the policy AdministratorAccess (for simplicity during the course; tighten permissions later if desired).
-	* Finish and download the Access Key ID and Secret Access Key.
-3. Configure the AWS CLI:
-  * Open your terminal and run:
-  ```bash
-  aws configure
-  ```
-  Enter the following when prompted:
-  * AWS Access Key ID: Copy from the IAM user creation step.
-  * AWS Secret Access Key: Copy from the IAM user creation step.
-  * Default Region: Enter your preferred AWS region (e.g., us-east-1).
-  * Output Format: json.
-4. Test Your AWS CLI Configuration:
-  * Run the following command:
-  ```bash
-  aws sts get-caller-identity
-  ```
-  You should see a response like this:
-  ```
-  {
-  "User": {
-    "Arn": "arn:aws:sts::123456789012:user/AdminUser",
-    "UserId": "AIDEXAMPLEEXAMPLEEXAMPLE",
-    "UserName": "AdminUser"
-  },...
-  }
-  ```
-  This indicates that your AWS CLI is configured correctly.
-
-**Step 3: Create the role for Bedrock**
-
-1. Navigate to IAM > Roles > Add Roles.
-2. Enter a name for the role, e.g., Bedrock-Dev-FullAccess-Role.
-3. Enter an AWS Managed Policy ARN, e.g., arn:aws:iam::aws:policy/AdministratorAccess.
-4. Save the role.
-5. Attach the policy BedrockFullAccess (for simplicity during the course; tighten permissions later if desired).
-6. Copy the role ARN, e.g., arn:aws:iam::123456789012:role/Bedrock-Dev-FullAccess-Role.
-
-**Step 4: Configure the AWS CLI to Assume the Role**
-1. Create a Policy for Bedrock Access:
-  * Go to IAM > Policies > Create Policy.
-  * Choose the JSON tab and paste this policy:
-  ```json
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": [
-          "bedrock:InvokeModel",
-          "bedrock:ListFoundationModels",
-          "bedrock:ListCustomModels"
-        ],
-        "Resource": "*"
-      }
-    ]
-  }
-  ```
-  * Click Next and name the policy, e.g., BedrockAccessPolicy.
-  * Click Create.
-
-2. 	Create a Role:
-  * Go to IAM > Roles > Create Role.
-  * Select AWS Service and choose EC2 (or any service; we’ll explain this later for simplicity).
-  * Attach the BedrockAccessPolicy you created.
-  * Name the role, e.g., Bedrock-Dev-Access-Role.
-
-**Step 4: Assume the role for CLI use**
-Now we are going to assume the role and get temporary credentials.
-
-1. Run the following command to assume the newly created Bedrock-Dev-Access-Role (or substitute for whatever you have named it):
-```bash
-aws sts assume-role \
-    --role-arn arn:aws:iam::<your-account-id>:role/Bedrock-Dev-Access-Role \
-    --role-session-name CLI-Session
-```
-2. The output from the previous command will look something like:
-```bash
-{
-    "Credentials": {
-        "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
-        "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-        "SessionToken": "AQoDYXdzEJzUvlyK...EXAMPLEKEY",
-        "Expiration": "2023-07-11T19:00:00Z"
-    }...
-}
-```
-  These are temporary credentials that you can use to access Bedrock.
-3. Use the returned credentials and export them as environment variables:
-```bash
-export AWS_ACCESS_KEY_ID=ASIA...
-export AWS_SECRET_ACCESS_KEY=wJalr...
-export AWS_SESSION_TOKEN=FQoGZXIvYXdz...
+generation:
+  model: "tinyllama"
+  temperature: 0.7
 ```
 
-**Step 5: Confirm you can succesfully assume the role and access Bedrock**
+This configuration file is loaded by the `ConfigLoader` class in `config_loader.py`, which provides methods to access these settings throughout the application. The YAML configuration allows for more structured and hierarchical configuration compared to environment variables, making it easier to manage complex settings.
 
-Run the following command to list the available models:
-```bash
-aws bedrock list-foundation-models --region <your-region>
-```
-If this returns some json (it should be a rather large json) then we are done.
+The configuration includes:
 
-**Step 6: Enable model access in AWS Management Console**
-Using the admin role for your account you should enable the models you want to use. At a minimum, you should enable the AWS Titan G1 - Express and Titan Text Embeddings V2 models for this RAG use case.
+1. **Retrieval Settings**: Controls how many documents to retrieve and whether to re-rank them
+2. **Query Expansion**: Enables and configures query expansion techniques to improve retrieval
+3. **Summarization**: Controls document summarization options
+4. **Generation**: Specifies the model to use and generation parameters
 
-![alt text](assets/image-bedrock-model-enable1.png)
+This YAML-based configuration approach provides flexibility and allows for easy modification of the RAG pipeline's behavior without changing code.
 
-**Step 7 [Optional]: Set up secrets management for production**
+## Troubleshooting
 
-If you want to set up secrets management for production, you can use AWS Secrets Manager to store your API key and other sensitive information. This can be done using the AWS CLI or in a script.
-You can refer to the AWS documentation for more information on how to set up secrets management for production.
+### Common Issues
 
-### Deployment
+1. **Database Connection Errors**:
+   - Verify PostgreSQL is running
+   - Check connection parameters in `.env`
+   - Ensure pgvector extension is installed
 
+2. **Embedding Generation Failures**:
+   - Check available memory
+   - Verify SentenceTransformer model is downloaded
+   - Ensure input text is properly formatted
 
-## Resources
+3. **LLM API Issues**:
+   - Verify API key is valid
+   - Check network connectivity
+   - Ensure request parameters are within limits
 
-#### General / RAG
+## Next Steps
 
-1. https://blog.lancedb.com/guide-to-use-contextual-retrieval-and-prompt-caching-with-lancedb/
-2. https://huggingface.co/learn/cookbook/agent_rag
-3. https://docs.astral.sh/ruff/formatter/#format-suppression
+1. **AWS Bedrock Integration**:
+   - Replace OpenAI with AWS Bedrock for generation
+   - Implement AWS Bedrock embeddings
+   - Add AWS-specific configuration
 
-#### Agentic RAG
-1. https://github.com/cobusgreyling/LlamaIndex/blob/d8902482a247c76c7902ded143a875d5580f072a/Agentic_RAG_Multi_Document_Agents-v1.ipynb
+2. **Performance Optimization**:
+   - Implement caching for frequently accessed documents
+   - Optimize database queries
+   - Add batch processing for large document sets
+
+3. **Enhanced Retrieval**:
+   - Implement hybrid search (keyword + semantic)
+   - Add document filtering capabilities
+   - Improve chunk selection strategies 
