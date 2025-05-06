@@ -85,9 +85,9 @@ def mock_settings(monkeypatch):
         bedrock_embedding_model_id: str = "test-embedding-model"
         
         # Ollama settings
-        ollama_url: AnyHttpUrl = "http://localhost:11434"
-        ollama_model: str = "llama2"
-        ollama_embedding_model: str = "llama2"
+        #ollama_url: AnyHttpUrl = "http://localhost:11434"
+        #ollama_model: str = "llama2"
+        #ollama_embedding_model: str = "llama2"
         
         # Opik settings
         opik_api_key: str = "test-key"
