@@ -21,17 +21,18 @@ class MockOpenAIClient:
         self.chat = self.Chat()
     
     class Chat:
-        def completions(self):
-            return self
+        def __init__(self):
+            self.completions = self.Completions()
         
-        def create(self, **kwargs):
-            return {
-                "choices": [{
-                    "message": {
-                        "content": "Here is information about perovskites: They are used in solar cells."
-                    }
-                }]
-            }
+        class Completions:
+            def create(self, **kwargs):
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Here is information about perovskites: They are used in solar cells."
+                        }
+                    }]
+                }
 
 # Patch the module-level client in generation_service.py
 openai_patcher = patch("server.src.services.generation_service.openai_client", MockOpenAIClient())
