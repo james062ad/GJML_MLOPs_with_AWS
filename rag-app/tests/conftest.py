@@ -150,8 +150,7 @@ def mock_config():
     """Mock configuration for testing."""
     return {
         "max_tokens": 1000,
-        "temperature": 0.7,
-        "top_p": 0.9
+        "temperature": 0.7
     }
 
 @pytest.fixture(autouse=True)
@@ -228,3 +227,27 @@ def mock_generate_response():
             "response_tokens_per_second": None
         }
         yield mock
+
+@pytest.fixture
+def mock_openai_client(monkeypatch):
+    """Mock OpenAI client to prevent actual API calls."""
+    class MockOpenAIClient:
+        def __init__(self):
+            self.chat = self.Chat()
+        
+        class Chat:
+            def completions(self):
+                return self
+            
+            def create(self, **kwargs):
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Here is information about perovskites: They are used in solar cells."
+                        }
+                    }]
+                }
+    
+    mock_client = MockOpenAIClient()
+    monkeypatch.setattr("openai.OpenAI", lambda *args, **kwargs: mock_client)
+    return mock_client
