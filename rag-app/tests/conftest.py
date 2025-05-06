@@ -14,7 +14,31 @@ sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..')))
 
 # ─────────────────────────────────────────────────────────────
-# ✅ 2. Global mock for SentenceTransformer before any imports
+# ✅ 2. Global mock for OpenAI client before any imports
+# ─────────────────────────────────────────────────────────────
+class MockOpenAIClient:
+    def __init__(self):
+        self.chat = self.Chat()
+    
+    class Chat:
+        def completions(self):
+            return self
+        
+        def create(self, **kwargs):
+            return {
+                "choices": [{
+                    "message": {
+                        "content": "Here is information about perovskites: They are used in solar cells."
+                    }
+                }]
+            }
+
+# Patch the module-level client in generation_service.py
+openai_patcher = patch("server.src.services.generation_service.openai_client", MockOpenAIClient())
+openai_patcher.start()
+
+# ─────────────────────────────────────────────────────────────
+# ✅ 3. Global mock for SentenceTransformer before any imports
 # ─────────────────────────────────────────────────────────────
 mock_model = MagicMock()
 mock_model.encode.return_value = [[0.1] * 384]  # Simulate 384-dim vector
@@ -23,7 +47,7 @@ patcher = patch("sentence_transformers.SentenceTransformer",
 patcher.start()
 
 # ─────────────────────────────────────────────────────────────
-# ✅ 3. Fixture: patch get_embedding_model to return mock
+# ✅ 4. Fixture: patch get_embedding_model to return mock
 # ─────────────────────────────────────────────────────────────
 
 
@@ -33,7 +57,7 @@ def mock_sentence_transformer():
         yield mock_model
 
 # ─────────────────────────────────────────────────────────────
-# ✅ 4. Fixture: patch AWS credential fetch
+# ✅ 5. Fixture: patch AWS credential fetch
 # ─────────────────────────────────────────────────────────────
 
 
@@ -48,7 +72,7 @@ def mock_aws_credentials():
         yield
 
 # ─────────────────────────────────────────────────────────────
-# ✅ 5. Fixture: patch boto3 Bedrock client
+# ✅ 6. Fixture: patch boto3 Bedrock client
 # ─────────────────────────────────────────────────────────────
 
 
@@ -62,7 +86,7 @@ def mock_bedrock_client():
         yield mock_client
 
 # ─────────────────────────────────────────────────────────────
-# ✅ 6. Fixture: safely patch config.settings (NO class override)
+# ✅ 7. Fixture: safely patch config.settings (NO class override)
 # ─────────────────────────────────────────────────────────────
 
 
@@ -130,7 +154,7 @@ def mock_settings(monkeypatch):
     return test_settings
 
 # ─────────────────────────────────────────────────────────────
-# ✅ 7. DB setup: create papers table and insert sample data
+# ✅ 8. DB setup: create papers table and insert sample data
 # ─────────────────────────────────────────────────────────────
 
 
@@ -188,12 +212,13 @@ def setup_test_database(db_config):
         conn.close()
 
 # ─────────────────────────────────────────────────────────────
-# ✅ 8. Cleanup global SentenceTransformer patch
+# ✅ 8. Cleanup global patches
 # ─────────────────────────────────────────────────────────────
 
 
 def pytest_sessionfinish(session, exitstatus):
     patcher.stop()
+    openai_patcher.stop()
 
 @pytest.fixture
 def mock_query():
@@ -227,27 +252,3 @@ def mock_generate_response():
             "response_tokens_per_second": None
         }
         yield mock
-
-@pytest.fixture
-def mock_openai_client(monkeypatch):
-    """Mock OpenAI client to prevent actual API calls."""
-    class MockOpenAIClient:
-        def __init__(self):
-            self.chat = self.Chat()
-        
-        class Chat:
-            def completions(self):
-                return self
-            
-            def create(self, **kwargs):
-                return {
-                    "choices": [{
-                        "message": {
-                            "content": "Here is information about perovskites: They are used in solar cells."
-                        }
-                    }]
-                }
-    
-    mock_client = MockOpenAIClient()
-    monkeypatch.setattr("openai.OpenAI", lambda *args, **kwargs: mock_client)
-    return mock_client

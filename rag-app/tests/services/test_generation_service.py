@@ -7,7 +7,7 @@ from server.src.services.generation_service import generate_response
 
 
 def test_generate_response_basic(
-    mock_query, mock_chunks, mock_config, mock_openai_client, mock_settings
+    mock_query, mock_chunks, mock_config, mock_settings
 ):
     """
     ✅ This tests a successful response from the LLM given valid inputs.
@@ -27,7 +27,7 @@ def test_generate_response_basic(
 # 🧪 TEST: Edge case when no context is passed
 # ─────────────────────────────────────────────────────────────
 def test_generate_response_empty_chunks(
-    mock_query, mock_config, mock_openai_client, mock_settings
+    mock_query, mock_config, mock_settings
 ):
     """
     ✅ This simulates what happens when no document chunks are available.
@@ -44,7 +44,7 @@ def test_generate_response_empty_chunks(
 # 🧪 TEST: Response behavior under high randomness
 # ─────────────────────────────────────────────────────────────
 def test_generate_response_high_temperature(
-    mock_query, mock_chunks, mock_openai_client, mock_settings
+    mock_query, mock_chunks, mock_settings
 ):
     """
     ✅ Uses a high temperature to ensure the system still responds coherently.
@@ -61,7 +61,7 @@ def test_generate_response_high_temperature(
 # ─────────────────────────────────────────────────────────────
 # 🧪 TEST: Extremely long query
 # ─────────────────────────────────────────────────────────────
-def test_generate_response_long_query(mock_chunks, mock_openai_client, mock_settings):
+def test_generate_response_long_query(mock_chunks, mock_settings):
     """
     ✅ Checks if long user queries break formatting or trigger truncation.
     """
@@ -81,7 +81,7 @@ def test_generate_response_long_query(mock_chunks, mock_openai_client, mock_sett
 # 🧪 TEST: Behavior with multiple chunks
 # ─────────────────────────────────────────────────────────────
 def test_generate_response_with_multiple_chunks(
-    mock_query, mock_chunks, mock_openai_client, mock_settings
+    mock_query, mock_chunks, mock_settings
 ):
     """
     ✅ Simulates RAG response using multiple retrieved documents.
