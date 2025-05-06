@@ -5,7 +5,7 @@ import os
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pydantic import SecretStr, AnyHttpUrl
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 # ─────────────────────────────────────────────────────────────
 # ✅ 1. Add root directory to sys.path
