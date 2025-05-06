@@ -7,15 +7,8 @@ from typing import List, Dict
 from sentence_transformers import SentenceTransformer
 import opik
 
-# Initialize as None, will be loaded on first use
-_embedding_model = None
-
-def get_embedding_model():
-    """Get the embedding model, initializing it if necessary."""
-    global _embedding_model
-    if _embedding_model is None:
-        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _embedding_model
+# Load a pre-trained Sentence Transformer model (e.g., 'all-MiniLM-L6-v2') - ideally retrieve this from app state ...
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 def get_db_connection(db_config: dict):
@@ -45,7 +38,10 @@ def retrieve_top_k_chunks(query: str, top_k: int, db_config: dict) -> List[Dict]
         List[Dict]: A list of dictionaries containing the top_k chunks with their titles and summaries.
     """
     # Generate the embedding for the query
-    query_embedding = get_embedding_model().encode(
+    # embedding_model = (
+    #     app.state.embedding_model
+    # )  # TODO: get reference to app state from Request...
+    query_embedding = embedding_model.encode(
         query, convert_to_tensor=False
     )
     
