@@ -2,56 +2,69 @@ import pytest
 from unittest.mock import patch, MagicMock
 import sys
 import os
-
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# Create the mock model
-mock_model = MagicMock()
-mock_model.encode.return_value = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-
-# Start the patch before any imports
-patcher = patch("sentence_transformers.SentenceTransformer", return_value=mock_model)
-patcher.start()
-
-# Now import other dependencies
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from pydantic_settings import BaseSettings
-from pydantic import Field, SecretStr, AnyHttpUrl
-from typing import Optional, Dict, Any
+from pydantic import SecretStr
+from typing import Optional, AnyHttpUrl, Dict
 
-# Mock AWS credentials
-mock_credentials = {
-    "access_key": "test-access-key",
-    "secret_key": "test-secret-key",
-    "session_token": "test-session-token"
-}
+# ─────────────────────────────────────────────────────────────
+# ✅ 1. Add root directory to sys.path
+# ─────────────────────────────────────────────────────────────
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')))
+
+# ─────────────────────────────────────────────────────────────
+# ✅ 2. Global mock for SentenceTransformer before any imports
+# ─────────────────────────────────────────────────────────────
+mock_model = MagicMock()
+mock_model.encode.return_value = [[0.1] * 384]  # Simulate 384-dim vector
+patcher = patch("sentence_transformers.SentenceTransformer",
+                return_value=mock_model)
+patcher.start()
+
+# ─────────────────────────────────────────────────────────────
+# ✅ 3. Fixture: patch get_embedding_model to return mock
+# ─────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(autouse=True)
 def mock_sentence_transformer():
-    """Mock the SentenceTransformer module to avoid loading the real model during tests."""
-    mock_model = MagicMock()
-    mock_model.encode.return_value = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-
     with patch("server.src.services.retrieval_service.get_embedding_model", return_value=mock_model):
         yield mock_model
 
+# ─────────────────────────────────────────────────────────────
+# ✅ 4. Fixture: patch AWS credential fetch
+# ─────────────────────────────────────────────────────────────
+
+
 @pytest.fixture(autouse=True)
 def mock_aws_credentials():
-    """Mock AWS credentials to avoid actual AWS calls during testing."""
+    mock_credentials = {
+        "access_key": "test-access-key",
+        "secret_key": "test-secret-key",
+        "session_token": "test-session-token"
+    }
     with patch("server.src.services.aws_refresh_service.CredentialStore.get_credentials", return_value=mock_credentials):
         yield
 
+# ─────────────────────────────────────────────────────────────
+# ✅ 5. Fixture: patch boto3 Bedrock client
+# ─────────────────────────────────────────────────────────────
+
+
 @pytest.fixture(autouse=True)
 def mock_bedrock_client():
-    """Mock the Bedrock client factory to avoid AWS calls during testing."""
     mock_client = MagicMock()
     mock_client.invoke_model.return_value = {
         "body": MagicMock(read=lambda: '{"results": [{"outputText": "test response"}]}')
     }
     with patch("boto3.client", return_value=mock_client):
         yield mock_client
+
+# ─────────────────────────────────────────────────────────────
+# ✅ 6. Fixture: safely patch config.settings (NO class override)
+# ─────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(autouse=True)
 def mock_settings(monkeypatch):
@@ -79,9 +92,9 @@ def mock_settings(monkeypatch):
         arxiv_api_url: AnyHttpUrl = "https://export.arxiv.org/api/query"
         data_path: str = "./data"
         
-        # Model settings
+        # Model settings - Force OpenAI only
         llm_provider: str = "openai"
-        embedding_provider: str = "sentence-transformer"
+        embedding_provider: str = "openai"
         temperature: float = 0.7
         top_p: float = 0.9
         max_tokens: int = 1000
@@ -91,7 +104,7 @@ def mock_settings(monkeypatch):
         openai_model: str = "gpt-3.5-turbo"
         openai_embedding_model: str = "text-embedding-ada-002"
         
-        # AWS settings
+        # AWS settings - Disabled
         aws_region: str = "us-east-1"
         aws_access_key_id: SecretStr = SecretStr("test-key")
         aws_secret_access_key: SecretStr = SecretStr("test-secret")
@@ -99,7 +112,7 @@ def mock_settings(monkeypatch):
         bedrock_model_id: str = "test-model"
         bedrock_embedding_model_id: str = "test-embedding-model"
         
-        # Ollama settings
+        # Ollama settings - Disabled
         ollama_url: AnyHttpUrl = "http://localhost:11434"
         ollama_model: str = "llama2"
         ollama_embedding_model: str = "llama2"
@@ -110,50 +123,24 @@ def mock_settings(monkeypatch):
         opik_project_name: str = "rag-app-test"
 
         # RAG config
-        rag_config: Dict[str, Any] = {}
+        rag_config: Dict[str, Any] = {
+            "providers": {
+                "enabled": ["openai"],
+                "disabled": ["ollama", "huggingface", "anthropic", "cohere", "bedrock"]
+            }
+        }
 
     test_settings = TestSettings()
     monkeypatch.setattr("server.src.config.settings", test_settings)
     return test_settings
 
-# Import after all mocks are defined
-from server.src.services.generation_service import generate_response, call_llm
-
-@pytest.fixture
-def mock_query():
-    """Fixture to provide a sample query for testing."""
-    return "Tell me about perovskites in solar cells."
-
-
-@pytest.fixture
-def mock_chunks():
-    """Fixture to provide mock retrieved document chunks for generation tests."""
-    return [
-        {"text": "Perovskite materials are used in solar cells."},
-        {"text": "Perovskites have unique electronic properties."},
-        {"text": "The efficiency of perovskite solar cells has improved."},
-    ]
-
-
-@pytest.fixture
-def mock_config():
-    """Fixture for mock configuration settings."""
-    return {
-        "max_tokens": 150,
-        "temperature": 0.7,
-    }
-
-
-@pytest.fixture
-def mock_generate_response():
-    """Fixture that mocks the LLM generation process in the call_llm function."""
-    with patch("server.src.services.generation_service.call_llm") as mock_gen:
-        yield mock_gen
+# ─────────────────────────────────────────────────────────────
+# ✅ 7. DB setup: create papers table and insert sample data
+# ─────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
 def db_config():
-    """Fixture for database configuration."""
     return {
         "dbname": "test_db",
         "user": "test_user",
@@ -165,39 +152,39 @@ def db_config():
 
 @pytest.fixture(autouse=True)
 def setup_test_database(db_config):
-    """Fixture to set up the test database with required tables."""
     conn = psycopg2.connect(**db_config)
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    
     try:
         cursor = conn.cursor()
         cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS papers (
-            id SERIAL PRIMARY KEY,
-            title TEXT,
-            chunk TEXT,
-            embedding vector(384)
-        );
+            CREATE TABLE IF NOT EXISTS papers (
+                id SERIAL PRIMARY KEY,
+                title TEXT,
+                chunk TEXT,
+                embedding vector(384)
+            );
         """)
-        
         cursor.execute("""
-        INSERT INTO papers (title, chunk, embedding)
-        VALUES 
-            ('Test Paper 1', 'Perovskite materials are used in solar cells.', '[0.1]'::vector(384)),
-            ('Test Paper 2', 'Perovskites have unique electronic properties.', '[0.1]'::vector(384)),
-            ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[0.1]'::vector(384))
-        ON CONFLICT DO NOTHING;
+            INSERT INTO papers (title, chunk, embedding)
+            VALUES 
+                ('Test Paper 1', 'Perovskite materials are used in solar cells.', '[0.1]'::vector(384)),
+                ('Test Paper 2', 'Perovskites have unique electronic properties.', '[0.1]'::vector(384)),
+                ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[0.1]'::vector(384))
+            ON CONFLICT DO NOTHING;
         """)
-        
         conn.commit()
     except Exception as e:
-        print(f"Error setting up test database: {e}")
+        print(f"❌ Error setting up test database: {e}")
         conn.rollback()
     finally:
         cursor.close()
         conn.close()
 
-# Clean up the patch when tests are done
+# ─────────────────────────────────────────────────────────────
+# ✅ 8. Cleanup global SentenceTransformer patch
+# ─────────────────────────────────────────────────────────────
+
+
 def pytest_sessionfinish(session, exitstatus):
     patcher.stop()
