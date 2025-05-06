@@ -145,6 +145,15 @@ def db_config():
     }
 
 
+@pytest.fixture
+def mock_config():
+    """Mock configuration for testing."""
+    return {
+        "max_tokens": 1000,
+        "temperature": 0.7,
+        "top_p": 0.9
+    }
+
 @pytest.fixture(autouse=True)
 def setup_test_database(db_config):
     conn = psycopg2.connect(**db_config)
@@ -160,12 +169,15 @@ def setup_test_database(db_config):
                 embedding vector(384)
             );
         """)
-        cursor.execute("""
+        # Create a proper 384-dimensional vector
+        embedding_vector = [0.1] * 384
+        embedding_str = f"ARRAY{embedding_vector}::vector(384)"
+        cursor.execute(f"""
             INSERT INTO papers (title, chunk, embedding)
             VALUES 
-                ('Test Paper 1', 'Perovskite materials are used in solar cells.', '[0.1]'::vector(384)),
-                ('Test Paper 2', 'Perovskites have unique electronic properties.', '[0.1]'::vector(384)),
-                ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', '[0.1]'::vector(384))
+                ('Test Paper 1', 'Perovskite materials are used in solar cells.', {embedding_str}),
+                ('Test Paper 2', 'Perovskites have unique electronic properties.', {embedding_str}),
+                ('Test Paper 3', 'The efficiency of perovskite solar cells has improved.', {embedding_str})
             ON CONFLICT DO NOTHING;
         """)
         conn.commit()
@@ -183,3 +195,36 @@ def setup_test_database(db_config):
 
 def pytest_sessionfinish(session, exitstatus):
     patcher.stop()
+
+@pytest.fixture
+def mock_query():
+    """Mock query for testing."""
+    return "What are perovskites?"
+
+@pytest.fixture
+def mock_chunks():
+    """Mock document chunks for testing."""
+    return [
+        {
+            "id": 1,
+            "title": "Test Paper 1",
+            "chunk": "Perovskite materials are used in solar cells.",
+            "similarity_score": 0.9
+        },
+        {
+            "id": 2,
+            "title": "Test Paper 2",
+            "chunk": "Perovskites have unique electronic properties.",
+            "similarity_score": 0.8
+        }
+    ]
+
+@pytest.fixture
+def mock_generate_response():
+    """Mock OpenAI response for testing."""
+    with patch("server.src.services.generation_service.generate_response") as mock:
+        mock.return_value = {
+            "response": "Perovskites are materials used in solar cells.",
+            "response_tokens_per_second": None
+        }
+        yield mock
