@@ -9,3 +9,9 @@
 **Date:** 2025-05-07  
 **Command:** `git clone https://github.com/james062ad/GJML_MLOPs_with_AWS.git`  
 **Outcome:** Repo cloned successfully; files visible (`README.md`, `rag-app/`, `docker-compose.yml`, etc.).
+## Step 2 – Create docs & screenshots folders  
+**Date:** 2025-05-07  
+**Command(s):**  
+```powershell
+mkdir docs
+mkdir docs\screenshots
