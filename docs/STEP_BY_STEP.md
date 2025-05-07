@@ -1,39 +1,182 @@
 # Step-by-Step Implementation Log
 
-## Step 0 – Fork repo
-**Date:** 2025-05-07  
-**Action:** Clicked “Fork” on skok007/MLOPs_with_AWS into my account and renamed the fork to `GJML_MLOPs_with_AWS`.  
-**Outcome:** New repo `github.com/james062ad/GJML_MLOPs_with_AWS` created.
+## 1. Clone & Fork
 
-## Step 1 – Clone repo
-**Date:** 2025-05-07  
-**Command:** `git clone https://github.com/james062ad/GJML_MLOPs_with_AWS.git`  
-**Outcome:** Repo cloned successfully; files visible (`README.md`, `rag-app/`, `docker-compose.yml`, etc.).
-## Step 2 – Create docs & screenshots folders  
-**Date:** 2025-05-07  
-**Command(s):**  
+**Date:** 2025-05-07
+**Commands run:**
+
+```bash
+# Forked via GitHub UI, then:
+git clone https://github.com/james062ad/GJML_MLOPs_with_AWS.git
+```
+
+**Outcome:** Repo cloned into `GJML_MLOPs_with_AWS/`.
+**Notes:** ✅ Clone completed without errors.
+
+---
+
+## 2. Create docs & screenshots folders
+
+**Date:** 2025-05-07
+**Commands run:**
+
 ```powershell
+cd GJML_MLOPs_with_AWS
+docker rm -f <none>
 mkdir docs
 mkdir docs\screenshots
-## Step 3 – Install Python dependencies  
-**Date:** 2025-05-07  
-**Command(s):**  
+```
+
+**Outcome:** `docs/` and `docs/screenshots/` directories created.
+**Notes:** ✅ Ready to store logs and screenshots.
+
+---
+
+## 3. Create & activate Python virtual environment
+
+**Date:** 2025-05-07
+**Commands run:**
+
 ```powershell
+cd rag-app
 python -m venv .venv
-.\.venv\Scripts\Activate
+.\.venv\Scripts\Activate.ps1
+```
+
+**Outcome:** Virtual environment `.venv` activated (`(.venv)` prompt appears).
+**Notes:** ✅ Isolated Python environment is ready.
+
+---
+
+## 4. Install Python dependencies
+
+**Date:** 2025-05-07
+**Commands run:**
+
+```powershell
 pip install --upgrade pip
 pip install -r requirements.txt
-## Step 3a – Install missing dependencies  
-**Date:** 2025-05-07  
-**Command:**  
+```
+
+**Outcome:** All packages from `requirements.txt` installed successfully.
+**Notes:** ✅ No missing dependency errors.
+
+---
+
+## 5. Install extra Python packages
+
+**Date:** 2025-05-07
+**Commands run:**
+
 ```powershell
 pip install openai boto3 streamlit
-## Step 5.2c – Clean up old containers & start Postgres only  
-**Date:** 2025-05-07  
-**Commands:**  
+```
+
+**Outcome:** `openai`, `boto3`, and `streamlit` installed.
+**Notes:** ✅ Verified by `pip show` commands.
+
+---
+
+## 6. Copy & configure `.env`
+
+**Date:** 2025-05-07
+**Commands run:**
+
+```powershell
+copy .env.example .env
+```
+
+**Edits made in `.env`:**
+
+```ini
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=rag_db
+POSTGRES_PORT=5433
+POSTGRES_HOST=localhost
+
+# remaining values left as default...
+OPENAI_API_KEY="sk-<your_key_here>"
+```
+
+**Outcome:** Database & API keys configured in `.env`.
+**Notes:** 🔒 Be sure not to commit your real key.
+
+---
+
+## 7. Launch all Docker services
+
+**Date:** 2025-05-07
+**Commands run:**
+
+```powershell
+cd ..\deploy\docker
+docker compose --env-file ..\..\.env up -d
+docker ps
+```
+
+**Outcome:** Postgres+pgvector and Ollama containers started.
+**Notes:** ⚠️ The Ollama container may restart repeatedly (can ignore for now).
+
+---
+
+## 8. Clean up & start only Postgres
+
+**Date:** 2025-05-07
+**Commands run:**
+
 ```powershell
 docker rm -f docker-postgres-1 rag-from-scratch-db-1 rag-pgvector
-docker compose --env-file ../../.env up -d postgres
+docker compose --env-file ..\..\.env up -d postgres
 docker ps
+```
 
+**Outcome:** Only Postgres+pgvector service is running on port 5433.
+**Notes:** ✅ Verified with `docker ps`.
 
+---
+
+## 9. Commit step-by-step log to Git
+
+**Date:** 2025-05-07
+**Commands run:**
+
+```bash
+git add docs/STEP_BY_STEP.md
+git commit -m "📒 Document Steps 1–9 in STEP_BY_STEP.md"
+git push
+```
+
+**Outcome:** Step-by-step log saved and pushed to GitHub.
+**Notes:** ✅ History is tracked and shareable.
+
+---
+
+## 10. Tag stable database state
+
+**Date:** 2025-05-07
+**Commands run:**
+
+```bash
+git checkout main
+git tag -a v0.2-db-healthy -m "Postgres on 5433 up"
+git push origin v0.2-db-healthy
+```
+
+**Outcome:** Tag `v0.2-db-healthy` created for rollback.
+**Notes:** 🔖 Tags allow easy rollback to known-good state.
+
+---
+
+## 11. Create feature branch for ingestion
+
+**Date:** 2025-05-07
+**Commands run:**
+
+```bash
+git checkout -b feature/ingestion-pipeline
+git push -u origin feature/ingestion-pipeline
+```
+
+**Outcome:** Branch `feature/ingestion-pipeline` created and tracked.
+**Notes:** 🌱 Isolates new work; easy to merge or discard.
