@@ -28,5 +28,12 @@ pip install -r requirements.txt
 **Command:**  
 ```powershell
 pip install openai boto3 streamlit
+## Step 5.2c – Clean up old containers & start Postgres only  
+**Date:** 2025-05-07  
+**Commands:**  
+```powershell
+docker rm -f docker-postgres-1 rag-from-scratch-db-1 rag-pgvector
+docker compose --env-file ../../.env up -d postgres
+docker ps
 
 
