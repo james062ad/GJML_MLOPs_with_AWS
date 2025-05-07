@@ -15,3 +15,18 @@
 ```powershell
 mkdir docs
 mkdir docs\screenshots
+## Step 3 – Install Python dependencies  
+**Date:** 2025-05-07  
+**Command(s):**  
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate
+pip install --upgrade pip
+pip install -r requirements.txt
+## Step 3a – Install missing dependencies  
+**Date:** 2025-05-07  
+**Command:**  
+```powershell
+pip install openai boto3 streamlit
+
+
