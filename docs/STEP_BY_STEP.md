@@ -134,7 +134,13 @@ docker ps
 **Outcome:** Only Postgres+pgvector service is running on port 5433.
 **Notes:** ✅ Verified with `docker ps`.
 
----
+## Step 5.2d – Install & verify pgvector extension  
+**Date:** 2025-05-07  
+**Commands run:**
+```powershell
+docker exec -it docker-postgres-1 psql -U postgres -d rag_db -c "CREATE EXTENSION IF NOT EXISTS vector;"
+docker exec -it docker-postgres-1 psql -U postgres -d rag_db -c "\dx"
+
 
 ## 9. Commit step-by-step log to Git
 
